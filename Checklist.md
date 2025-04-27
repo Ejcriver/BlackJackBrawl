@@ -4,10 +4,10 @@
 
 - [x] Connect two instances of the game using **Unity Multiplayer Center**.
 - [x] Load a scene via the network (host-client setup).
-- [ ] Spawn and control a **player prefab** when the scene loads.
-- [ ] Create **multiple random spawn locations** for players.
-- [ ] Move the **local player** independently (no interference with others).
-- [ ] Sync a **camera** to follow the local player.
+- [x] Spawn and control a **player prefab** when the scene loads.
+- [x] Create **multiple random spawn locations** for players.
+- [x] Move the **local player** independently (no interference with others).
+- [x] Sync a **camera** to follow the local player.
 - [ ] Implement a "shooting" or **spawning behavior** (e.g., spawning cards or chips on action).
 - [ ] Objects that **perform actions** based on **networked variables** (e.g., chip count, hand value, etc.).
 - [ ] Demonstrate **networked collisions** (e.g., spawned cards/chips disappearing on pick-up).
