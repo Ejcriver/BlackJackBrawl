@@ -1,11 +1,12 @@
 using UnityEngine;
+using UnityEngine.UIElements;
 
 using UnityEngine.UI;
 
 public class TableInteractable : MonoBehaviour
 {
-    [Tooltip("The UI canvas to show when the player interacts with this table.")]
-    public GameObject blackjackUICanvas;
+    [Tooltip("The UIDocument to show when the player interacts with this table.")]
+    public UnityEngine.UIElements.UIDocument blackjackUIDocument;
     [Tooltip("The key used to interact with the table.")]
     public KeyCode interactKey = KeyCode.E;
     [Tooltip("How close the player must be to interact.")]
@@ -23,15 +24,56 @@ public class TableInteractable : MonoBehaviour
         if (isPlayerNearby && Input.GetKeyDown(interactKey))
         {
             Debug.Log($"[TableInteractable] E pressed while near table: {gameObject.name}");
-            if (blackjackUICanvas != null)
+            ShowBlackjackUI();
+        }
+        // Allow closing UI with Escape key
+        if (blackjackUIDocument != null && blackjackUIDocument.gameObject.activeSelf && Input.GetKeyDown(KeyCode.Escape))
+        {
+            CloseBlackjackUI();
+        }
+    }
+
+    private void ShowBlackjackUI()
+    {
+        if (blackjackUIDocument != null)
+        {
+            Debug.Log($"[TableInteractable] Showing blackjack UI document for: {gameObject.name}");
+            blackjackUIDocument.gameObject.SetActive(true);
+            // Lock cursor and pause movement
+            UnityEngine.Cursor.lockState = CursorLockMode.None;
+            UnityEngine.Cursor.visible = true;
+            if (player != null)
             {
-                Debug.Log($"[TableInteractable] Showing blackjack UI canvas for: {gameObject.name}");
-                blackjackUICanvas.SetActive(true);
-                // Optionally, lock cursor and pause movement here
+                var pc = player.GetComponent<PlayerController>();
+                if (pc != null)
+                    pc.SetMovementEnabled(false);
             }
-            else
+            // Register close button event if not already registered
+            var closeBtn = blackjackUIDocument.rootVisualElement.Q<UnityEngine.UIElements.Button>("CloseButton");
+            if (closeBtn != null)
             {
-                Debug.LogWarning($"[TableInteractable] blackjackUICanvas is not assigned on {gameObject.name}");
+                closeBtn.clicked -= CloseBlackjackUI; // Remove any duplicate listeners
+                closeBtn.clicked += CloseBlackjackUI;
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[TableInteractable] blackjackUIDocument is not assigned on {gameObject.name}");
+        }
+    }
+
+    private void CloseBlackjackUI()
+    {
+        if (blackjackUIDocument != null)
+        {
+            blackjackUIDocument.gameObject.SetActive(false);
+            UnityEngine.Cursor.lockState = CursorLockMode.Locked;
+            UnityEngine.Cursor.visible = false;
+            if (player != null)
+            {
+                var pc = player.GetComponent<PlayerController>();
+                if (pc != null)
+                    pc.SetMovementEnabled(true);
             }
         }
     }
@@ -68,9 +110,18 @@ public class TableInteractable : MonoBehaviour
             Debug.Log($"[TableInteractable] Local player exited trigger: {gameObject.name}");
             isPlayerNearby = false;
             player = null;
-            if (blackjackUICanvas != null)
+            if (blackjackUIDocument != null)
             {
-                blackjackUICanvas.SetActive(false);
+                blackjackUIDocument.gameObject.SetActive(false);
+                // Unlock cursor and resume movement
+                UnityEngine.Cursor.lockState = CursorLockMode.Locked;
+                UnityEngine.Cursor.visible = false;
+                if (player != null)
+                {
+                    var pc = player.GetComponent<PlayerController>();
+                    if (pc != null)
+                        pc.SetMovementEnabled(true);
+                }
             }
             if (promptInstance != null)
             {

@@ -1,0 +1,82 @@
+/* Root styling */
+.blackjack-root {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(21, 71, 52, 0.93);
+    padding: 20px;
+}
+.background {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(21, 71, 52, 0.8);
+    opacity: 0.8;
+}
+.panel {
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 12px;
+    background-color: rgba(44, 62, 80, 0.8);
+    border-radius: 10px;
+    min-width: 300px;
+}
+.section-label {
+    font-size: 18px;
+    color: #ffeb3b;
+    margin-bottom: 4px;
+}
+.hand-panel {
+    flex-direction: row;
+    align-items: center;
+    min-height: 60px;
+    margin-bottom: 8px;
+}
+.action-panel {
+    flex-direction: row;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+.action-button {
+    margin: 0 8px;
+    padding: 8px 18px;
+    background-color: #27ae60;
+    color: #fff;
+    font-size: 16px;
+    border-radius: 6px;
+}
+.info-panel {
+    flex-direction: row;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+.info-label {
+    margin: 0 10px;
+    color: #fff;
+    font-size: 16px;
+}
+.powercards-panel {
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.message-panel {
+    margin: 8px 0 8px 0;
+    align-items: center;
+}
+.message-label {
+    color: #ffeb3b;
+    font-size: 20px;
+}
+.close-button {
+    position: absolute;
+    top: 16px;
+    right: 32px;
+    padding: 6px 18px;
+    background-color: #c0392b;
+    color: #fff;
+    font-size: 16px;
+    border-radius: 6px;
+}

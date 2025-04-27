@@ -1,0 +1,30 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/BlackjackGame.uss?fileID=7433441132597879392&amp;guid=4913b52fdf1ecce44943f6f2f9a03f9e&amp;type=3#BlackjackGame" />
+    <ui:VisualElement name="BlackjackRoot" class="blackjack-root">
+        <ui:VisualElement name="Background" class="background" />
+        <ui:VisualElement name="DealerPanel" class="panel">
+            <ui:Label name="DealerLabel" class="section-label" />
+            <ui:VisualElement name="DealerHand" class="hand-panel" />
+        </ui:VisualElement>
+        <ui:VisualElement name="PlayerPanel" class="panel">
+            <ui:Label name="PlayerLabel" class="section-label" />
+            <ui:VisualElement name="PlayerHand" class="hand-panel" />
+        </ui:VisualElement>
+        <ui:VisualElement name="ActionPanel" class="action-panel">
+            <ui:Button name="HitButton" text="Hit" class="action-button" />
+            <ui:Button name="StandButton" text="Stand" class="action-button" />
+        </ui:VisualElement>
+        <ui:VisualElement name="InfoPanel" class="info-panel">
+            <ui:Label name="ChipsLabel" class="info-label" />
+            <ui:Label name="HPLabel" class="info-label" />
+            <ui:Label name="RoundInfoLabel" class="info-label" />
+        </ui:VisualElement>
+        <ui:VisualElement name="PowerCardsPanel" class="powercards-panel">
+            <ui:Label class="section-label" />
+        </ui:VisualElement>
+        <ui:VisualElement name="MessagePanel" class="message-panel">
+            <ui:Label name="MessageLabel" class="message-label" />
+        </ui:VisualElement>
+        <ui:Button name="CloseButton" class="close-button" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -40,6 +40,12 @@ public class PlayerController : NetworkBehaviour
     private Rigidbody rb;
     private float yRotation = 0f;
     private float xRotation = 0f;
+    private bool movementEnabled = true;
+
+    public void SetMovementEnabled(bool enabled)
+    {
+        movementEnabled = enabled;
+    }
 
     private void Awake()
     {
@@ -68,7 +74,7 @@ public class PlayerController : NetworkBehaviour
 
     private void Update()
     {
-        if (!IsOwner) return;
+        if (!IsOwner || !movementEnabled) return;
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
         movementInput = new Vector3(h, 0, v).normalized;
@@ -90,7 +96,7 @@ public class PlayerController : NetworkBehaviour
 
     private void FixedUpdate()
     {
-        if (!IsOwner) return;
+        if (!IsOwner || !movementEnabled) return;
         if (movementInput.sqrMagnitude > 0.01f && cameraTransform != null)
         {
             // Get the camera's forward and right directions, ignoring vertical tilt
