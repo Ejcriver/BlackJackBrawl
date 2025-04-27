@@ -36,21 +36,23 @@ public class TableInteractable : MonoBehaviour
         }
     }
 
+    private bool IsLocalPlayer(GameObject playerObj)
+    {
+        var playerController = playerObj.GetComponent<PlayerController>();
+        return playerController != null && playerController.IsOwner;
+    }
+
     void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player"))
+        if (other.CompareTag("Player") && IsLocalPlayer(other.gameObject))
         {
-            Debug.Log($"[TableInteractable] Player entered trigger: {gameObject.name}");
+            Debug.Log($"[TableInteractable] Local player entered trigger: {gameObject.name}");
             isPlayerNearby = true;
             player = other.gameObject;
-            // Show UI prompt
             if (promptPrefab != null && promptInstance == null)
             {
                 promptInstance = Instantiate(promptPrefab);
                 Debug.Log($"[TableInteractable] Prompt instantiated for table: {gameObject.name}");
-                // If you want the prompt to follow the table in world space:
-                // promptInstance.transform.position = transform.position + Vector3.up * 2f;
-                // Or for screen-space, just instantiate as-is
             }
             else if (promptPrefab == null)
             {
@@ -61,16 +63,15 @@ public class TableInteractable : MonoBehaviour
 
     void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("Player"))
+        if (other.CompareTag("Player") && IsLocalPlayer(other.gameObject))
         {
-            Debug.Log($"[TableInteractable] Player exited trigger: {gameObject.name}");
+            Debug.Log($"[TableInteractable] Local player exited trigger: {gameObject.name}");
             isPlayerNearby = false;
             player = null;
             if (blackjackUICanvas != null)
             {
                 blackjackUICanvas.SetActive(false);
             }
-            // Hide UI prompt
             if (promptInstance != null)
             {
                 Destroy(promptInstance);
