@@ -48,6 +48,7 @@ public class PlayerController : NetworkBehaviour
 
     private void Start()
     {
+        Debug.Log($"[PlayerController] IsOwner: {IsOwner}, IsLocalPlayer: {IsLocalPlayer}, OwnerClientId: {NetworkObject.OwnerClientId}, LocalClientId: {NetworkManager.Singleton.LocalClientId}", this);
         // Only the local player controls their movement
         if (!IsOwner)
         {
