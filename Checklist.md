@@ -3,7 +3,7 @@
 ## ✅ Core Project Requirements (Multiplayer Features)
 
 - [x] Connect two instances of the game using **Unity Multiplayer Center**.
-- [ ] Load a scene via the network (host-client setup).
+- [x] Load a scene via the network (host-client setup).
 - [ ] Spawn and control a **player prefab** when the scene loads.
 - [ ] Create **multiple random spawn locations** for players.
 - [ ] Move the **local player** independently (no interference with others).

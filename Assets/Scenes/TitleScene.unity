@@ -809,7 +809,7 @@ MonoBehaviour:
   NetworkConfig:
     ProtocolVersion: 0
     NetworkTransport: {fileID: 267915415}
-    PlayerPrefab: {fileID: 0}
+    PlayerPrefab: {fileID: 4394656750315856384, guid: 48f6cbad1aec4474f8d855fcdbe0a4bf, type: 3}
     Prefabs:
       NetworkPrefabsLists:
       - {fileID: 11400000, guid: 565b6efae8e660643b7d769a0893585e, type: 2}
