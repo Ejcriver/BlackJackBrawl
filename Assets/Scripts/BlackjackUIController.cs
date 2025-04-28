@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections.Generic;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 public class BlackjackUIController : MonoBehaviour
@@ -26,6 +25,11 @@ public class BlackjackUIController : MonoBehaviour
 
     void OnEnable()
     {
+        // Multiplayer: subscribe to player list changes for UI updates
+        var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (blackjackManager != null)
+            blackjackManager.OnPlayerListChanged += UpdateUI;
+
         if (blackjackUIDocument != null)
         {
             var root = blackjackUIDocument.rootVisualElement;
@@ -51,6 +55,11 @@ public class BlackjackUIController : MonoBehaviour
 
     void OnDisable()
     {
+        // Multiplayer: unsubscribe
+        var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (blackjackManager != null)
+            blackjackManager.OnPlayerListChanged -= UpdateUI;
+
         if (hitButton != null)
             hitButton.clicked -= OnHitClicked;
         if (standButton != null)
@@ -112,7 +121,7 @@ public class BlackjackUIController : MonoBehaviour
         }
     }
 
-    private string CardToString(int card)
+    private static string CardToString(int card)
     {
         switch (card)
         {
@@ -123,5 +132,72 @@ public class BlackjackUIController : MonoBehaviour
             default: return card.ToString();
         }
     }
-}
 
+    private static int GetCardValue(int card)
+    {
+        // Blackjack: Ace is 1, J/Q/K are 10, others are face value
+        if (card == 1) return 1;
+        if (card >= 11 && card <= 13) return 10;
+        return card;
+    }
+
+    // Multiplayer debug UI for development
+    void OnGUI()
+    {
+        GUILayout.BeginArea(new Rect(10, 10, 320, 200), GUI.skin.box);
+        GUILayout.Label("Multiplayer Blackjack Controls");
+
+        if (Unity.Netcode.NetworkManager.Singleton != null && !Unity.Netcode.NetworkManager.Singleton.IsClient && !Unity.Netcode.NetworkManager.Singleton.IsServer)
+        {
+            if (GUILayout.Button("Start Host"))
+                Unity.Netcode.NetworkManager.Singleton.StartHost();
+            if (GUILayout.Button("Start Client"))
+                Unity.Netcode.NetworkManager.Singleton.StartClient();
+        }
+
+        var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsClient && blackjackManager != null)
+        {
+            if (GUILayout.Button("Join Table"))
+                blackjackManager.JoinTableServerRpc();
+            if (GUILayout.Button("Start Round (Host Only)"))
+                blackjackManager.StartRoundServerRpc();
+
+            GUILayout.Space(10);
+            GUILayout.Label($"Players: {blackjackManager.PlayerIds.Count}");
+            GUILayout.Label($"Game State: {blackjackManager.GetType().GetProperty("gameState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(blackjackManager)}");
+
+            // Show all player hands
+            for (int i = 0; i < blackjackManager.PlayerHands.Count; i++)
+            {
+                unsafe
+                {
+                    var hand = blackjackManager.PlayerHands[i];
+                    string handStr = "";
+                    int handValue = 0;
+                    for (int c = 0; c < hand.count; c++)
+                    {
+                        int card = hand.cards[c];
+                        handStr += CardToString(card) + " ";
+                        handValue += GetCardValue(card);
+                    }
+                    GUILayout.Label($"Player {i + 1} Hand: {handStr} (Value: {handValue})");
+                }
+            }
+            // Show dealer hand
+            if (blackjackManager.DealerHand != null && blackjackManager.DealerHand.Count > 0)
+            {
+                string dealerHandStr = "";
+                int dealerValue = 0;
+                for (int c = 0; c < blackjackManager.DealerHand.Count; c++)
+                {
+                    int card = blackjackManager.DealerHand[c];
+                    dealerHandStr += CardToString(card) + " ";
+                    dealerValue += GetCardValue(card);
+                }
+                GUILayout.Label($"Dealer Hand: {dealerHandStr} (Value: {dealerValue})");
+            }
+        }
+        GUILayout.EndArea();
+    }
+}
