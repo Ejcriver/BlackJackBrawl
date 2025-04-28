@@ -107,5 +107,95 @@ public class NetworkBlackjackManager : NetworkBehaviour
         return card;
     }
 
-    // Add more methods as needed (e.g., player actions, hand value calculation)
+    // Hand value calculation for a PlayerHand
+    private int HandValue(PlayerHand hand)
+    {
+        int value = 0;
+        int aces = 0;
+        unsafe
+        {
+            for (int i = 0; i < hand.count; i++)
+            {
+                int v = hand.cards[i];
+                if (v == 1) aces++;
+                value += v > 10 ? 10 : v;
+            }
+        }
+        // Handle ace as 11 if possible
+        while (aces > 0 && value <= 11)
+        {
+            value += 10;
+            aces--;
+        }
+        return value;
+    }
+
+    // Player requests to hit
+    [ServerRpc(RequireOwnership = false)]
+    public void HitServerRpc(ServerRpcParams rpcParams = default)
+    {
+        if (!IsServer) return;
+        ulong clientId = rpcParams.Receive.SenderClientId;
+        int playerIndex = playerIds.IndexOf(clientId);
+        if (playerIndex != currentTurnIndex.Value || gameState.Value != GameState.PlayerTurn)
+            return; // Not this player's turn
+        var hand = playerHands[playerIndex];
+        hand.Add(DrawCard());
+        playerHands[playerIndex] = hand;
+        if (HandValue(hand) > 21)
+        {
+            NextTurn();
+        }
+    }
+
+    // Player requests to stand
+    [ServerRpc(RequireOwnership = false)]
+    public void StandServerRpc(ServerRpcParams rpcParams = default)
+    {
+        if (!IsServer) return;
+        ulong clientId = rpcParams.Receive.SenderClientId;
+        int playerIndex = playerIds.IndexOf(clientId);
+        if (playerIndex != currentTurnIndex.Value || gameState.Value != GameState.PlayerTurn)
+            return; // Not this player's turn
+        NextTurn();
+    }
+
+    // Advance turn or start dealer
+    private void NextTurn()
+    {
+        currentTurnIndex.Value++;
+        if (currentTurnIndex.Value >= playerHands.Count)
+        {
+            gameState.Value = GameState.DealerTurn;
+            DealerPlay();
+        }
+    }
+
+    // Dealer plays automatically
+    private void DealerPlay()
+    {
+        while (HandValueDealer() < 17)
+        {
+            dealerHand.Add(DrawCard());
+        }
+        gameState.Value = GameState.RoundOver;
+    }
+
+    private int HandValueDealer()
+    {
+        int value = 0;
+        int aces = 0;
+        for (int i = 0; i < dealerHand.Count; i++)
+        {
+            int v = dealerHand[i];
+            if (v == 1) aces++;
+            value += v > 10 ? 10 : v;
+        }
+        while (aces > 0 && value <= 11)
+        {
+            value += 10;
+            aces--;
+        }
+        return value;
+    }
 }

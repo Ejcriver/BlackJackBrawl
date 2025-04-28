@@ -144,7 +144,7 @@ public class BlackjackUIController : MonoBehaviour
     // Multiplayer debug UI for development
     void OnGUI()
     {
-        GUILayout.BeginArea(new Rect(10, 10, 320, 200), GUI.skin.box);
+        GUILayout.BeginArea(new Rect(10, 10, 320, 400), GUI.skin.box);
         GUILayout.Label("Multiplayer Blackjack Controls");
 
         if (Unity.Netcode.NetworkManager.Singleton != null && !Unity.Netcode.NetworkManager.Singleton.IsClient && !Unity.Netcode.NetworkManager.Singleton.IsServer)
@@ -165,7 +165,60 @@ public class BlackjackUIController : MonoBehaviour
 
             GUILayout.Space(10);
             GUILayout.Label($"Players: {blackjackManager.PlayerIds.Count}");
-            GUILayout.Label($"Game State: {blackjackManager.GetType().GetProperty("gameState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(blackjackManager)}");
+            var localId = Unity.Netcode.NetworkManager.Singleton.LocalClientId;
+            GUILayout.Label($"[Debug] LocalClientId: {localId}");
+            var turnVar = blackjackManager.GetType().GetField("currentTurnIndex", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(blackjackManager);
+            int turnIdx = turnVar is Unity.Netcode.NetworkVariable<int> nv ? nv.Value : 0;
+            GUILayout.Label($"[Debug] currentTurnIndex: {turnIdx}");
+            // Print PlayerIds as values
+            string playerIdsStr = "";
+            for (int i = 0; i < blackjackManager.PlayerIds.Count; i++)
+            {
+                playerIdsStr += blackjackManager.PlayerIds[i];
+                if (i < blackjackManager.PlayerIds.Count - 1) playerIdsStr += ", ";
+            }
+            GUILayout.Label($"[Debug] PlayerIds: [{playerIdsStr}]");
+            var gameStateVar = blackjackManager.GetType().GetField("gameState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(blackjackManager);
+            string gameStateStr = "";
+            if (gameStateVar != null)
+            {
+                var valueProp = gameStateVar.GetType().GetProperty("Value");
+                if (valueProp != null)
+                {
+                    var enumVal = valueProp.GetValue(gameStateVar);
+                    gameStateStr = enumVal != null ? enumVal.ToString() : "";
+                    GUILayout.Label($"[Debug] gameStateObj type: {enumVal?.GetType()} value: {gameStateStr}");
+                }
+                else
+                {
+                    GUILayout.Label("[Debug] gameStateObj: Value property not found");
+                }
+            }
+            else
+            {
+                GUILayout.Label("[Debug] gameStateVar is null");
+            }
+
+            // Show whose turn (use debug turnIdx from above)
+            if (blackjackManager.PlayerIds.Count > 0 && turnIdx < blackjackManager.PlayerIds.Count)
+            {
+                ulong turnPlayerId = blackjackManager.PlayerIds[turnIdx];
+                GUILayout.Label($"Current Turn: Player {turnIdx + 1} (ClientId: {turnPlayerId})");
+                GUILayout.Label($"[Debug] LocalClientId == turnPlayerId: {Unity.Netcode.NetworkManager.Singleton.LocalClientId == turnPlayerId}");
+                if (Unity.Netcode.NetworkManager.Singleton.LocalClientId == turnPlayerId && 
+                    gameStateStr == "PlayerTurn")
+                {
+                    GUILayout.Label("[Debug] Should see Hit/Stand buttons!");
+                    if (GUILayout.Button("Hit"))
+                        blackjackManager.HitServerRpc();
+                    if (GUILayout.Button("Stand"))
+                        blackjackManager.StandServerRpc();
+                }
+                else
+                {
+                    GUILayout.Label($"[Debug] Button conditions: LocalClientId={Unity.Netcode.NetworkManager.Singleton.LocalClientId}, turnPlayerId={turnPlayerId}, gameStateStr={gameStateStr}");
+                }
+            }
 
             // Show all player hands
             for (int i = 0; i < blackjackManager.PlayerHands.Count; i++)
