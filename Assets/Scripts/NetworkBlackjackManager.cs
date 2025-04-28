@@ -78,9 +78,23 @@ public class NetworkBlackjackManager : NetworkBehaviour
 
     private List<int> CreateDeck()
     {
-        var newDeck = new List<int>();
-        for (int i = 1; i <= 52; i++) newDeck.Add(i);
-        // Shuffle logic goes here
+        var newDeck = new List<int>(52);
+        // Add four of each card value (1-13)
+        for (int value = 1; value <= 13; value++)
+        {
+            for (int suit = 0; suit < 4; suit++)
+            {
+                newDeck.Add(value);
+            }
+        }
+        // Shuffle deck using Fisher-Yates
+        for (int i = newDeck.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            int temp = newDeck[i];
+            newDeck[i] = newDeck[j];
+            newDeck[j] = temp;
+        }
         return newDeck;
     }
 
