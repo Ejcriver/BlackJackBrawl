@@ -14,9 +14,12 @@ public class NetworkBlackjackManager : NetworkBehaviour
     private NetworkList<PlayerHand> playerHands;
     private NetworkVariable<int> currentTurnIndex = new NetworkVariable<int>(0);
     private NetworkVariable<int> winnerIndex = new NetworkVariable<int>(-1); // -1: no winner yet
+    private NetworkList<int> playerHP; // HP for each player
+    private NetworkList<byte> playerActions; // Track stand/bust as byte
 
     public NetworkList<ulong> PlayerIds => playerIds;
     public NetworkList<PlayerHand> PlayerHands => playerHands;
+    public NetworkList<int> PlayerHP => playerHP;
     public int WinnerIndex => winnerIndex.Value; // for UI
 
 
@@ -24,6 +27,8 @@ public class NetworkBlackjackManager : NetworkBehaviour
     {
         playerIds = new NetworkList<ulong>();
         playerHands = new NetworkList<PlayerHand>();
+        playerHP = new NetworkList<int>();
+        playerActions = new NetworkList<byte>();
         deck = new List<int>();
     }
 
@@ -46,6 +51,8 @@ public class NetworkBlackjackManager : NetworkBehaviour
         {
             playerIds.Add(clientId);
             playerHands.Add(new PlayerHand { count = 0 });
+            playerHP.Add(30); // Start with 30 HP
+            playerActions.Add((byte)PlayerActionState.None);
         }
     }
 
@@ -69,6 +76,10 @@ public class NetworkBlackjackManager : NetworkBehaviour
             hand.Add(DrawCard());
             playerHands[i] = hand;
         }
+        // Reset player action states
+        playerActions.Clear();
+        for (int i = 0; i < playerHands.Count; i++)
+            playerActions.Add((byte)PlayerActionState.None);
         gameState.Value = GameState.PlayerTurn;
         currentTurnIndex.Value = 0;
         winnerIndex.Value = -1;
@@ -140,8 +151,16 @@ public class NetworkBlackjackManager : NetworkBehaviour
         var hand = playerHands[playerIndex];
         hand.Add(DrawCard());
         playerHands[playerIndex] = hand;
-        // After hit, advance turn (even if bust)
-        NextTurn();
+        // If bust, mark action as Bust and resolve round
+        if (HandValue(hand) > 21)
+        {
+            playerActions[playerIndex] = (byte)PlayerActionState.Bust;
+            ResolveRound();
+        }
+        else
+        {
+            NextTurn();
+        }
     }
 
     // Player requests to stand
@@ -153,8 +172,12 @@ public class NetworkBlackjackManager : NetworkBehaviour
         int playerIndex = playerIds.IndexOf(clientId);
         if (playerIndex != currentTurnIndex.Value || gameState.Value != GameState.PlayerTurn)
             return; // Not this player's turn
-        // After stand, advance turn
-        NextTurn();
+        playerActions[playerIndex] = (byte)PlayerActionState.Stand;
+        // If both players have stood, resolve round
+        if (AllPlayersStoodOrBusted())
+            ResolveRound();
+        else
+            NextTurn();
     }
 
     // Advance turn or start dealer
@@ -163,38 +186,79 @@ public class NetworkBlackjackManager : NetworkBehaviour
         currentTurnIndex.Value++;
         if (currentTurnIndex.Value >= playerHands.Count)
         {
-            // All players have acted, determine winner
-            int maxValue = -1;
-            int maxIndex = -1;
-            bool tie = false;
+            // Loop back to first player, but skip eliminated/busted/standing players
             for (int i = 0; i < playerHands.Count; i++)
             {
-                int v = HandValue(playerHands[i]);
-                if (v > 21) continue; // busts can't win
-                if (v > maxValue)
+                int idx = (currentTurnIndex.Value + i) % playerHands.Count;
+                if (playerHP[idx] > 0 && (PlayerActionState)playerActions[idx] == PlayerActionState.None)
                 {
-                    maxValue = v;
-                    maxIndex = i;
-                    tie = false;
-                }
-                else if (v == maxValue)
-                {
-                    tie = true;
+                    currentTurnIndex.Value = idx;
+                    return;
                 }
             }
-            if (maxValue == -1) // all bust
-            {
-                winnerIndex.Value = -1;
-            }
-            else if (tie)
-            {
-                winnerIndex.Value = -2; // -2 means tie
-            }
-            else
-            {
-                winnerIndex.Value = maxIndex;
-            }
-            gameState.Value = GameState.RoundOver;
+            // If no eligible players, do nothing (should only happen if all bust/stand)
         }
     }
+
+    private bool AllPlayersStoodOrBusted()
+    {
+        for (int i = 0; i < playerActions.Count; i++)
+        {
+            if (playerHP[i] > 0 && (PlayerActionState)playerActions[i] == PlayerActionState.None)
+                return false;
+        }
+        return true;
+    }
+
+    private void ResolveRound()
+    {
+        // Determine winner and deal HP damage
+        int maxValue = -1;
+        int maxIndex = -1;
+        bool tie = false;
+        for (int i = 0; i < playerHands.Count; i++)
+        {
+            int v = HandValue(playerHands[i]);
+            if (v > 21 || playerHP[i] <= 0) continue; // busts and eliminated can't win
+            if (v > maxValue)
+            {
+                maxValue = v;
+                maxIndex = i;
+                tie = false;
+            }
+            else if (v == maxValue)
+            {
+                tie = true;
+            }
+        }
+        if (maxValue == -1) // all bust or eliminated
+        {
+            winnerIndex.Value = -1;
+        }
+        else if (tie)
+        {
+            winnerIndex.Value = -2; // -2 means tie
+        }
+        else
+        {
+            winnerIndex.Value = maxIndex;
+            // Deal damage to all other non-busted, non-eliminated players
+            for (int i = 0; i < playerHands.Count; i++)
+            {
+                if (i == maxIndex || playerHP[i] <= 0) continue;
+                int loserValue = HandValue(playerHands[i]);
+                if (loserValue > 21) loserValue = 0; // busts are treated as 0 for damage
+                int damage = maxValue - loserValue;
+                // Blackjack bonus: winner has 21 with 2 cards
+                var winnerHand = playerHands[maxIndex];
+                int winnerCardCount = winnerHand.count;
+                if (maxValue == 21 && winnerCardCount == 2)
+                    damage += 5;
+                playerHP[i] = Mathf.Max(0, playerHP[i] - damage);
+            }
+        }
+        gameState.Value = GameState.RoundOver;
+    }
+
+    public enum PlayerActionState : byte { None, Stand, Bust }
 }

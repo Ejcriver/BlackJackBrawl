@@ -231,8 +231,10 @@ public class BlackjackUIController : MonoBehaviour
                         handStr += CardToString(card) + " ";
                         handValue += GetCardValue(card);
                     }
+                    int hp = (i < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[i] : 0;
                     string winnerNote = (winnerIdx == i) ? " [WINNER]" : "";
-                    GUILayout.Label($"Player {i + 1} Hand: {handStr} (Value: {handValue}){winnerNote}");
+                    string eliminatedNote = (hp <= 0) ? " [ELIMINATED]" : "";
+                    GUILayout.Label($"Player {i + 1} Hand: {handStr} (Value: {handValue}) | HP: {hp}{winnerNote}{eliminatedNote}");
                 }
             }
             // Show PvP round result
@@ -244,7 +246,34 @@ public class BlackjackUIController : MonoBehaviour
                 else if (winnerIdx == -2)
                     resultMsg = "It's a tie!";
                 else if (winnerIdx >= 0 && winnerIdx < blackjackManager.PlayerIds.Count)
-                    resultMsg = $"Player {winnerIdx + 1} wins!";
+                {
+                    // Show damage dealt to each player
+                    int winnerVal = 0;
+                    int winnerCardCount = 0;
+                    unsafe
+                    {
+                        var winnerHand = blackjackManager.PlayerHands[winnerIdx];
+                        for (int c = 0; c < winnerHand.count; c++) winnerVal += GetCardValue(winnerHand.cards[c]);
+                        winnerCardCount = winnerHand.count;
+                    }
+                    string damageInfo = "";
+                    for (int i = 0; i < blackjackManager.PlayerHands.Count; i++)
+                    {
+                        if (i == winnerIdx) continue;
+                        int hp = (i < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[i] : 0;
+                        int loserVal = 0;
+                        unsafe
+                        {
+                            var loserHand = blackjackManager.PlayerHands[i];
+                            for (int c = 0; c < loserHand.count; c++) loserVal += GetCardValue(loserHand.cards[c]);
+                        }
+                        if (loserVal > 21 || hp <= 0) continue;
+                        int dmg = winnerVal - loserVal;
+                        if (winnerVal == 21 && winnerCardCount == 2) dmg += 5;
+                        damageInfo += $"Player {i + 1} took {dmg} damage. ";
+                    }
+                    resultMsg = $"Player {winnerIdx + 1} wins! {damageInfo}";
+                }
                 else
                     resultMsg = "";
                 GUILayout.Label($"[Result] {resultMsg}");
