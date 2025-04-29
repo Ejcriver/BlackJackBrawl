@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class NetworkBlackjackManager : NetworkBehaviour
 {
-    public enum GameState : byte { Waiting, Dealing, PlayerTurn, RoundOver }
+    public enum GameState : byte { Waiting, Dealing, PlayerTurn, RoundOver, GameOver }
 
     // Networked state
     private NetworkVariable<GameState> gameState = new NetworkVariable<GameState>(GameState.Waiting);
@@ -258,6 +258,33 @@ public class NetworkBlackjackManager : NetworkBehaviour
             }
         }
         gameState.Value = GameState.RoundOver;
+        // Check if only one player remains with HP > 0
+        int alive = 0;
+        int lastAliveIdx = -1;
+        for (int i = 0; i < playerHP.Count; i++)
+        {
+            if (playerHP[i] > 0)
+            {
+                alive++;
+                lastAliveIdx = i;
+            }
+        }
+        if (alive > 1)
+        {
+            // Start next round after delay
+            StartCoroutine(NextRoundDelayCoroutine());
+        }
+        else
+        {
+            gameState.Value = GameState.GameOver;
+            winnerIndex.Value = lastAliveIdx;
+        }
+    }
+
+    private System.Collections.IEnumerator NextRoundDelayCoroutine()
+    {
+        yield return new UnityEngine.WaitForSeconds(2f);
+        StartRoundServerRpc();
     }
 
     public enum PlayerActionState : byte { None, Stand, Bust }
