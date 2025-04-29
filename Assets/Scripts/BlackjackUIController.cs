@@ -10,10 +10,8 @@ public class BlackjackUIController : MonoBehaviour
     private Button hitButton;
     private Button standButton;
     private VisualElement playerHandPanel;
-    private VisualElement dealerHandPanel;
     private Label messageLabel;
-    private Label playerLabel;
-    private Label dealerLabel;
+    private Label playerLabel; // Remove dealerLabel
 
     void Awake()
     {
@@ -36,10 +34,8 @@ public class BlackjackUIController : MonoBehaviour
             hitButton = root.Q<Button>("HitButton");
             standButton = root.Q<Button>("StandButton");
             playerHandPanel = root.Q<VisualElement>("PlayerHand");
-            dealerHandPanel = root.Q<VisualElement>("DealerHand");
             messageLabel = root.Q<Label>("MessageLabel");
             playerLabel = root.Q<Label>("PlayerLabel");
-            dealerLabel = root.Q<Label>("DealerLabel");
 
             if (hitButton != null)
                 hitButton.clicked += OnHitClicked;
@@ -91,26 +87,16 @@ public class BlackjackUIController : MonoBehaviour
             cardLabel.AddToClassList("info-label");
             playerHandPanel.Add(cardLabel);
         }
-        // Update dealer hand
-        dealerHandPanel.Clear();
-        foreach (int card in blackjackGameLogic.dealerHand)
-        {
-            var cardLabel = new Label(CardToString(card));
-            cardLabel.AddToClassList("info-label");
-            dealerHandPanel.Add(cardLabel);
-        }
         // Update hand values
         if (playerLabel != null)
             playerLabel.text = $"Your Hand ({blackjackGameLogic.HandValue(blackjackGameLogic.playerHand)})";
-        if (dealerLabel != null)
-            dealerLabel.text = $"Dealer ({blackjackGameLogic.HandValue(blackjackGameLogic.dealerHand)})";
         // Show result if round is over
         if (blackjackGameLogic.gameState == BlackjackGameLogic.GameState.RoundOver)
         {
             if (messageLabel != null)
-                messageLabel.text = blackjackGameLogic.GetResult();
+                messageLabel.text = blackjackGameLogic.GetResult(); // This should be updated to show PvP winner
             if (hitButton != null) hitButton.SetEnabled(false);
-            if (standButton != null) standButton.SetEnabled(false);
+            if (standButton != null) hitButton.SetEnabled(false);
         }
         else
         {
@@ -221,6 +207,17 @@ public class BlackjackUIController : MonoBehaviour
             }
 
             // Show all player hands
+            int winnerIdx = -999;
+            var winnerField = blackjackManager.GetType().GetField("winnerIndex", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(blackjackManager);
+            if (winnerField != null)
+            {
+                var winnerValueProp = winnerField.GetType().GetProperty("Value");
+                if (winnerValueProp != null)
+                {
+                    var val = winnerValueProp.GetValue(winnerField);
+                    if (val is int idx) winnerIdx = idx;
+                }
+            }
             for (int i = 0; i < blackjackManager.PlayerHands.Count; i++)
             {
                 unsafe
@@ -234,22 +231,25 @@ public class BlackjackUIController : MonoBehaviour
                         handStr += CardToString(card) + " ";
                         handValue += GetCardValue(card);
                     }
-                    GUILayout.Label($"Player {i + 1} Hand: {handStr} (Value: {handValue})");
+                    string winnerNote = (winnerIdx == i) ? " [WINNER]" : "";
+                    GUILayout.Label($"Player {i + 1} Hand: {handStr} (Value: {handValue}){winnerNote}");
                 }
             }
-            // Show dealer hand
-            if (blackjackManager.DealerHand != null && blackjackManager.DealerHand.Count > 0)
+            // Show PvP round result
+            if (gameStateStr == "RoundOver")
             {
-                string dealerHandStr = "";
-                int dealerValue = 0;
-                for (int c = 0; c < blackjackManager.DealerHand.Count; c++)
-                {
-                    int card = blackjackManager.DealerHand[c];
-                    dealerHandStr += CardToString(card) + " ";
-                    dealerValue += GetCardValue(card);
-                }
-                GUILayout.Label($"Dealer Hand: {dealerHandStr} (Value: {dealerValue})");
+                string resultMsg = "";
+                if (winnerIdx == -1)
+                    resultMsg = "All players bust! No winner.";
+                else if (winnerIdx == -2)
+                    resultMsg = "It's a tie!";
+                else if (winnerIdx >= 0 && winnerIdx < blackjackManager.PlayerIds.Count)
+                    resultMsg = $"Player {winnerIdx + 1} wins!";
+                else
+                    resultMsg = "";
+                GUILayout.Label($"[Result] {resultMsg}");
             }
+
         }
         GUILayout.EndArea();
     }

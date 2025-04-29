@@ -22,7 +22,9 @@
 ## 🎮 Core Game Features (Blackjack + Balatro Elements)
 
 ### Blackjack Core Loop:
-- [ ] Implement **Blackjack rules** (goal: 21 or closest under).
+- [~] Implement **Blackjack rules** (goal: 21 or closest under).  
+    - [x] Basic multiplayer turn-based Blackjack loop (deal, hit/stand, dealer, winner)
+    - [ ] Power cards, chips, and advanced rules (in progress)
 - [ ] Players draw from a **13-card deck** (standard cards + power cards).
 - [ ] Players earn **Chips** by winning rounds or bonus plays.
 - [ ] Each round has phases: **Deal**, **Action (Hit/Stand/Power Card)**, **Resolution**.
@@ -70,6 +72,7 @@
 ---
 
 ## 🧩 UI Elements:
+- [x] Debug multiplayer UI with turn-based controls and state display (for development)
 - [ ] Blackjack Table UI (player hand, deck, chips, power card buttons).
 - [ ] **Chip Counter** (networked variable display).
 - [ ] **Power Card Button Bar** (click to activate).

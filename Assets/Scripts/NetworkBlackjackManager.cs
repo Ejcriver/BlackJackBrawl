@@ -5,24 +5,24 @@ using UnityEngine;
 
 public class NetworkBlackjackManager : NetworkBehaviour
 {
-    public enum GameState : byte { Waiting, Dealing, PlayerTurn, DealerTurn, RoundOver }
+    public enum GameState : byte { Waiting, Dealing, PlayerTurn, RoundOver }
 
     // Networked state
     private NetworkVariable<GameState> gameState = new NetworkVariable<GameState>(GameState.Waiting);
     private NetworkList<ulong> playerIds;
     private List<int> deck;
-    private NetworkList<int> dealerHand;
-    public NetworkList<int> DealerHand => dealerHand;
     private NetworkList<PlayerHand> playerHands;
     private NetworkVariable<int> currentTurnIndex = new NetworkVariable<int>(0);
+    private NetworkVariable<int> winnerIndex = new NetworkVariable<int>(-1); // -1: no winner yet
 
     public NetworkList<ulong> PlayerIds => playerIds;
     public NetworkList<PlayerHand> PlayerHands => playerHands;
+    public int WinnerIndex => winnerIndex.Value; // for UI
+
 
     private void Awake()
     {
         playerIds = new NetworkList<ulong>();
-        dealerHand = new NetworkList<int>();
         playerHands = new NetworkList<PlayerHand>();
         deck = new List<int>();
     }
@@ -53,9 +53,8 @@ public class NetworkBlackjackManager : NetworkBehaviour
     public void StartRoundServerRpc()
     {
         if (!IsServer) return;
-        // Reset deck, dealer hand, and player hands
+        // Reset deck and player hands
         deck = CreateDeck();
-        dealerHand.Clear();
         for (int i = 0; i < playerHands.Count; i++)
         {
             var hand = playerHands[i];
@@ -70,10 +69,9 @@ public class NetworkBlackjackManager : NetworkBehaviour
             hand.Add(DrawCard());
             playerHands[i] = hand;
         }
-        dealerHand.Add(DrawCard());
-        dealerHand.Add(DrawCard());
         gameState.Value = GameState.PlayerTurn;
         currentTurnIndex.Value = 0;
+        winnerIndex.Value = -1;
     }
 
     private List<int> CreateDeck()
@@ -142,10 +140,8 @@ public class NetworkBlackjackManager : NetworkBehaviour
         var hand = playerHands[playerIndex];
         hand.Add(DrawCard());
         playerHands[playerIndex] = hand;
-        if (HandValue(hand) > 21)
-        {
-            NextTurn();
-        }
+        // After hit, advance turn (even if bust)
+        NextTurn();
     }
 
     // Player requests to stand
@@ -157,6 +153,7 @@ public class NetworkBlackjackManager : NetworkBehaviour
         int playerIndex = playerIds.IndexOf(clientId);
         if (playerIndex != currentTurnIndex.Value || gameState.Value != GameState.PlayerTurn)
             return; // Not this player's turn
+        // After stand, advance turn
         NextTurn();
     }
 
@@ -166,36 +163,38 @@ public class NetworkBlackjackManager : NetworkBehaviour
         currentTurnIndex.Value++;
         if (currentTurnIndex.Value >= playerHands.Count)
         {
-            gameState.Value = GameState.DealerTurn;
-            DealerPlay();
+            // All players have acted, determine winner
+            int maxValue = -1;
+            int maxIndex = -1;
+            bool tie = false;
+            for (int i = 0; i < playerHands.Count; i++)
+            {
+                int v = HandValue(playerHands[i]);
+                if (v > 21) continue; // busts can't win
+                if (v > maxValue)
+                {
+                    maxValue = v;
+                    maxIndex = i;
+                    tie = false;
+                }
+                else if (v == maxValue)
+                {
+                    tie = true;
+                }
+            }
+            if (maxValue == -1) // all bust
+            {
+                winnerIndex.Value = -1;
+            }
+            else if (tie)
+            {
+                winnerIndex.Value = -2; // -2 means tie
+            }
+            else
+            {
+                winnerIndex.Value = maxIndex;
+            }
+            gameState.Value = GameState.RoundOver;
         }
-    }
-
-    // Dealer plays automatically
-    private void DealerPlay()
-    {
-        while (HandValueDealer() < 17)
-        {
-            dealerHand.Add(DrawCard());
-        }
-        gameState.Value = GameState.RoundOver;
-    }
-
-    private int HandValueDealer()
-    {
-        int value = 0;
-        int aces = 0;
-        for (int i = 0; i < dealerHand.Count; i++)
-        {
-            int v = dealerHand[i];
-            if (v == 1) aces++;
-            value += v > 10 ? 10 : v;
-        }
-        while (aces > 0 && value <= 11)
-        {
-            value += 10;
-            aces--;
-        }
-        return value;
     }
 }
