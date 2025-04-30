@@ -22,8 +22,9 @@
 ## 🎮 Core Game Features (Blackjack + Balatro Elements)
 
 ### Blackjack Core Loop:
-- [~] Implement **Blackjack rules** (goal: 21 or closest under).  
-    - [x] Basic multiplayer turn-based Blackjack loop (deal, hit/stand, dealer, winner)
+- [x] Implement **Blackjack rules** (goal: 21 or closest under).  
+    - [x] Basic multiplayer turn-based Blackjack loop (deal, hit/stand, PvP winner, no dealer)
+    - [x] Game is now fully PvP (dealer logic removed)
     - [ ] Power cards, chips, and advanced rules (in progress)
 - [ ] Players draw from a **13-card deck** (standard cards + power cards).
 - [ ] Players earn **Chips** by winning rounds or bonus plays.
@@ -31,13 +32,13 @@
 
 ### HP Battle System (Add-On Features):
 
-- [ ] Implement **player HP** as a networked variable (e.g., 30 HP).
-- [ ] Calculate **damage** based on hand value difference after each round.
-- [ ] Apply **special damage rules** for busting or exact 21.
+- [x] Implement **player HP** as a networked variable (e.g., 30 HP).
+- [x] Calculate **damage** based on hand value difference after each round (including bust = 0, Blackjack bonus).
+- [x] Apply **special damage rules** for busting or exact 21.
 - [ ] Update **HP bar UI** for each player.
 - [ ] Add **damage pop-ups** for visual feedback.
-- [ ] Eliminate players who reach **0 HP**.
-- [ ] Declare **last player standing** as winner.
+- [x] Eliminate players who reach **0 HP**.
+- [x] Declare **last player standing** as winner (auto rounds until only one remains).
 - [ ] Integrate HP-related **Power Cards**:
   - [ ] Heal Card, Vampire Card, Shield Wall.
 

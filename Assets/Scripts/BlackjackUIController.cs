@@ -5,20 +5,20 @@ using UnityEngine.UIElements;
 public class BlackjackUIController : MonoBehaviour
 {
     public UIDocument blackjackUIDocument;
-    public BlackjackGameLogic blackjackGameLogic;
+    // public BlackjackGameLogic blackjackGameLogic; // No longer used
 
     private Button hitButton;
     private Button standButton;
     private VisualElement playerHandPanel;
+    private VisualElement infoPanel;
     private Label messageLabel;
     private Label playerLabel; // Remove dealerLabel
+    private List<Label> playerInfoLabels = new List<Label>();
 
     void Awake()
     {
         if (blackjackUIDocument == null)
             blackjackUIDocument = GetComponent<UIDocument>();
-        if (blackjackGameLogic == null)
-            blackjackGameLogic = FindFirstObjectByType<BlackjackGameLogic>();
     }
 
     void OnEnable()
@@ -34,6 +34,7 @@ public class BlackjackUIController : MonoBehaviour
             hitButton = root.Q<Button>("HitButton");
             standButton = root.Q<Button>("StandButton");
             playerHandPanel = root.Q<VisualElement>("PlayerHand");
+            infoPanel = root.Q<VisualElement>("InfoPanel");
             messageLabel = root.Q<Label>("MessageLabel");
             playerLabel = root.Q<Label>("PlayerLabel");
 
@@ -41,9 +42,6 @@ public class BlackjackUIController : MonoBehaviour
                 hitButton.clicked += OnHitClicked;
             if (standButton != null)
                 standButton.clicked += OnStandClicked;
-
-            if (blackjackGameLogic != null)
-                blackjackGameLogic.onGameStateChanged += UpdateUI;
 
             UpdateUI();
         }
@@ -60,48 +58,159 @@ public class BlackjackUIController : MonoBehaviour
             hitButton.clicked -= OnHitClicked;
         if (standButton != null)
             standButton.clicked -= OnStandClicked;
-        if (blackjackGameLogic != null)
-            blackjackGameLogic.onGameStateChanged -= UpdateUI;
     }
 
     private void OnHitClicked()
     {
-        if (blackjackGameLogic != null)
-            blackjackGameLogic.PlayerHit();
+        var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (blackjackManager != null)
+            blackjackManager.HitServerRpc();
     }
 
     private void OnStandClicked()
     {
-        if (blackjackGameLogic != null)
-            blackjackGameLogic.PlayerStand();
+        var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (blackjackManager != null)
+            blackjackManager.StandServerRpc();
     }
 
     private void UpdateUI()
     {
-        if (blackjackGameLogic == null) return;
-        // Update player hand
-        playerHandPanel.Clear();
-        foreach (int card in blackjackGameLogic.playerHand)
+        // Multiplayer info
+        var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        string gameStateStr = blackjackManager != null ? blackjackManager.gameState.Value.ToString() : "";
+        if (blackjackManager != null && infoPanel != null)
         {
-            var cardLabel = new Label(CardToString(card));
-            cardLabel.AddToClassList("info-label");
-            playerHandPanel.Add(cardLabel);
+            infoPanel.Clear();
+            int winnerIdx = -999;
+            var winnerField = blackjackManager.GetType().GetField("winnerIndex", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(blackjackManager);
+            if (winnerField != null)
+            {
+                var winnerValueProp = winnerField.GetType().GetProperty("Value");
+                if (winnerValueProp != null)
+                {
+                    var val = winnerValueProp.GetValue(winnerField);
+                    if (val is int idx) winnerIdx = idx;
+                }
+            }
+            for (int i = 0; i < blackjackManager.PlayerHands.Count; i++)
+            {
+                unsafe
+                {
+                    var hand = blackjackManager.PlayerHands[i];
+                    string handStr = "";
+                    int handValue = 0;
+                    for (int c = 0; c < hand.count; c++)
+                    {
+                        int card = hand.cards[c];
+                        handStr += CardToString(card) + " ";
+                        handValue += GetCardValue(card);
+                    }
+                    int hp = (i < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[i] : 0;
+                    string winnerNote = (winnerIdx == i) ? " [WINNER]" : "";
+                    string eliminatedNote = (hp <= 0) ? " [ELIMINATED]" : "";
+                    var label = new Label($"Player {i + 1} Hand: {handStr} (Value: {handValue}) | HP: {hp}{winnerNote}{eliminatedNote}");
+                    label.AddToClassList("info-label");
+                    infoPanel.Add(label);
+                }
+            }
+            // Show PvP round result
+            if (gameStateStr == "RoundOver")
+            {
+                string resultMsg = "";
+                if (winnerIdx == -1)
+                    resultMsg = "All players bust! No winner.";
+                else if (winnerIdx == -2)
+                    resultMsg = "It's a tie!";
+                else if (winnerIdx >= 0 && winnerIdx < blackjackManager.PlayerIds.Count)
+                {
+                    // Show damage dealt to each player
+                    int winnerVal = 0;
+                    int winnerCardCount = 0;
+                    unsafe
+                    {
+                        var winnerHand = blackjackManager.PlayerHands[winnerIdx];
+                        for (int c = 0; c < winnerHand.count; c++) winnerVal += GetCardValue(winnerHand.cards[c]);
+                        winnerCardCount = winnerHand.count;
+                    }
+                    string damageInfo = "";
+                    for (int i = 0; i < blackjackManager.PlayerHands.Count; i++)
+                    {
+                        if (i == winnerIdx) continue;
+                        int hp = (i < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[i] : 0;
+                        int loserVal = 0;
+                        unsafe
+                        {
+                            var loserHand = blackjackManager.PlayerHands[i];
+                            for (int c = 0; c < loserHand.count; c++) loserVal += GetCardValue(loserHand.cards[c]);
+                        }
+                        if (loserVal > 21) loserVal = 0;
+                        if (hp <= 0) continue;
+                        int dmg = winnerVal - loserVal;
+                        if (winnerVal == 21 && winnerCardCount == 2) dmg += 5;
+                        damageInfo += $"Player {i + 1} took {dmg} damage. ";
+                    }
+                    resultMsg = $"Player {winnerIdx + 1} wins! {damageInfo}";
+                }
+                else
+                    resultMsg = "";
+                var resultLabel = new Label($"[Result] {resultMsg}");
+                resultLabel.AddToClassList("info-label");
+                infoPanel.Add(resultLabel);
+            }
+            else if (gameStateStr == "GameOver")
+            {
+                string winnerMsg = (winnerIdx >= 0 && winnerIdx < blackjackManager.PlayerIds.Count) ? $"Player {winnerIdx + 1} is the last standing!" : "Game Over!";
+                var overLabel = new Label(winnerMsg);
+                overLabel.AddToClassList("info-label");
+                infoPanel.Add(overLabel);
+            }
         }
-        // Update hand values
-        if (playerLabel != null)
-            playerLabel.text = $"Your Hand ({blackjackGameLogic.HandValue(blackjackGameLogic.playerHand)})";
-        // Show result if round is over
-        if (blackjackGameLogic.gameState == BlackjackGameLogic.GameState.RoundOver)
+        // Local player hand panel (networked)
+        if (blackjackManager == null) return;
+        playerHandPanel.Clear();
+        // Find local player index
+        var networkManager = Unity.Netcode.NetworkManager.Singleton;
+        ulong localClientId = networkManager != null ? networkManager.LocalClientId : 0;
+        int playerIdx = -1;
+        Debug.Log($"[UI] UpdateUI called. localClientId={localClientId}, playerIds=[{string.Join(",", blackjackManager.PlayerIds)}]");
+        for (int i = 0; i < blackjackManager.PlayerIds.Count; i++)
         {
-            if (messageLabel != null)
-                messageLabel.text = blackjackGameLogic.GetResult(); // This should be updated to show PvP winner
+            if (blackjackManager.PlayerIds[i] == localClientId)
+            {
+                playerIdx = i;
+                break;
+            }
+        }
+        Debug.Log($"[UI] Calculated playerIdx={playerIdx}");
+        if (playerIdx >= 0 && playerIdx < blackjackManager.PlayerHands.Count)
+        {
+            unsafe
+            {
+                var hand = blackjackManager.PlayerHands[playerIdx];
+                int handValue = 0;
+                for (int c = 0; c < hand.count; c++)
+                {
+                    int card = hand.cards[c];
+                    var cardLabel = new Label(CardToString(card));
+                    cardLabel.AddToClassList("info-label");
+                    playerHandPanel.Add(cardLabel);
+                    handValue += GetCardValue(card);
+                }
+                int hp = (playerIdx < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[playerIdx] : 0;
+                if (playerLabel != null)
+                    playerLabel.text = $"Your Hand (Value: {handValue}) | HP: {hp}";
+            }
+        }
+        // Show/hide action buttons
+        // Use the already declared gameStateStr
+        if (gameStateStr == "RoundOver" || gameStateStr == "GameOver")
+        {
             if (hitButton != null) hitButton.SetEnabled(false);
             if (standButton != null) hitButton.SetEnabled(false);
         }
         else
         {
-            if (messageLabel != null)
-                messageLabel.text = "";
             if (hitButton != null) hitButton.SetEnabled(true);
             if (standButton != null) standButton.SetEnabled(true);
         }

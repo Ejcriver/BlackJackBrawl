@@ -8,12 +8,12 @@ public class NetworkBlackjackManager : NetworkBehaviour
     public enum GameState : byte { Waiting, Dealing, PlayerTurn, RoundOver, GameOver }
 
     // Networked state
-    private NetworkVariable<GameState> gameState = new NetworkVariable<GameState>(GameState.Waiting);
+    public NetworkVariable<GameState> gameState = new NetworkVariable<GameState>(GameState.Waiting);
     private NetworkList<ulong> playerIds;
     private List<int> deck;
     private NetworkList<PlayerHand> playerHands;
     private NetworkVariable<int> currentTurnIndex = new NetworkVariable<int>(0);
-    private NetworkVariable<int> winnerIndex = new NetworkVariable<int>(-1); // -1: no winner yet
+    public NetworkVariable<int> winnerIndex = new NetworkVariable<int>(-1); // -1: no winner yet
     private NetworkList<int> playerHP; // HP for each player
     private NetworkList<byte> playerActions; // Track stand/bust as byte
 
@@ -39,6 +39,22 @@ public class NetworkBlackjackManager : NetworkBehaviour
         base.OnNetworkSpawn();
         playerIds.OnListChanged += (change) =>
         {
+            Debug.Log($"[Network] playerIds changed: [{string.Join(",", playerIds)}]");
+            OnPlayerListChanged?.Invoke();
+        };
+        playerHands.OnListChanged += (change) =>
+        {
+            Debug.Log($"[Network] playerHands changed");
+            OnPlayerListChanged?.Invoke();
+        };
+        playerHP.OnListChanged += (change) =>
+        {
+            Debug.Log($"[Network] playerHP changed: [{string.Join(",", playerHP)}]");
+            OnPlayerListChanged?.Invoke();
+        };
+        playerActions.OnListChanged += (change) =>
+        {
+            Debug.Log($"[Network] playerActions changed: [{string.Join(",", playerActions)}]");
             OnPlayerListChanged?.Invoke();
         };
     }
@@ -47,12 +63,14 @@ public class NetworkBlackjackManager : NetworkBehaviour
     public void JoinTableServerRpc(ServerRpcParams rpcParams = default)
     {
         ulong clientId = rpcParams.Receive.SenderClientId;
+        Debug.Log($"[JoinTableServerRpc] clientId={clientId}, playerIds=[{string.Join(",", playerIds)}]");
         if (!playerIds.Contains(clientId))
         {
             playerIds.Add(clientId);
             playerHands.Add(new PlayerHand { count = 0 });
             playerHP.Add(30); // Start with 30 HP
             playerActions.Add((byte)PlayerActionState.None);
+            Debug.Log($"[JoinTableServerRpc] Added clientId={clientId}. playerIds now: [{string.Join(",", playerIds)}]");
         }
     }
 
@@ -146,8 +164,12 @@ public class NetworkBlackjackManager : NetworkBehaviour
         if (!IsServer) return;
         ulong clientId = rpcParams.Receive.SenderClientId;
         int playerIndex = playerIds.IndexOf(clientId);
+        Debug.Log($"[HitServerRpc] clientId={clientId}, playerIndex={playerIndex}, currentTurnIndex={currentTurnIndex.Value}, playerIds=[{string.Join(",", playerIds)}]");
         if (playerIndex != currentTurnIndex.Value || gameState.Value != GameState.PlayerTurn)
+        {
+            Debug.Log($"[HitServerRpc] Not this player's turn or wrong state.");
             return; // Not this player's turn
+        }
         var hand = playerHands[playerIndex];
         hand.Add(DrawCard());
         playerHands[playerIndex] = hand;
@@ -155,6 +177,7 @@ public class NetworkBlackjackManager : NetworkBehaviour
         if (HandValue(hand) > 21)
         {
             playerActions[playerIndex] = (byte)PlayerActionState.Bust;
+            Debug.Log($"[HitServerRpc] Player {playerIndex} busted!");
             ResolveRound();
         }
         else
@@ -170,8 +193,12 @@ public class NetworkBlackjackManager : NetworkBehaviour
         if (!IsServer) return;
         ulong clientId = rpcParams.Receive.SenderClientId;
         int playerIndex = playerIds.IndexOf(clientId);
+        Debug.Log($"[StandServerRpc] clientId={clientId}, playerIndex={playerIndex}, currentTurnIndex={currentTurnIndex.Value}, playerIds=[{string.Join(",", playerIds)}]");
         if (playerIndex != currentTurnIndex.Value || gameState.Value != GameState.PlayerTurn)
+        {
+            Debug.Log($"[StandServerRpc] Not this player's turn or wrong state.");
             return; // Not this player's turn
+        }
         playerActions[playerIndex] = (byte)PlayerActionState.Stand;
         // If both players have stood, resolve round
         if (AllPlayersStoodOrBusted())
