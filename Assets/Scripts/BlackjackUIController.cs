@@ -168,7 +168,13 @@ public class BlackjackUIController : MonoBehaviour
         }
         // Local player hand panel (networked)
         if (blackjackManager == null) return;
-        playerHandPanel.Clear();
+        // Use DealerPanel for local player's hand and OtherHandsPanel for others
+        // Only declare these ONCE at the top of the method to avoid CS0128 errors
+        var root = blackjackUIDocument != null ? blackjackUIDocument.rootVisualElement : null;
+        var localPlayerPanel = root != null ? root.Q<VisualElement>("LocalPlayerPanel") : null;
+        var otherPlayerPanel = root != null ? root.Q<VisualElement>("OtherPlayerPanel") : null;
+        if (localPlayerPanel != null)
+            localPlayerPanel.Clear();
         // Find local player index
         var networkManager = Unity.Netcode.NetworkManager.Singleton;
         ulong localClientId = networkManager != null ? networkManager.LocalClientId : 0;
@@ -183,7 +189,65 @@ public class BlackjackUIController : MonoBehaviour
             }
         }
         Debug.Log($"[UI] Calculated playerIdx={playerIdx}");
-        if (playerIdx >= 0 && playerIdx < blackjackManager.PlayerHands.Count)
+
+        // Show ONLY the local player's hand in LocalPlayerPanel
+        if (localPlayerPanel != null && playerIdx >= 0 && playerIdx < blackjackManager.PlayerHands.Count)
+        {
+            unsafe
+            {
+                var hand = blackjackManager.PlayerHands[playerIdx];
+                int handValue = 0;
+                string handStr = "";
+                for (int c = 0; c < hand.count; c++)
+                {
+                    int card = hand.cards[c];
+                    handStr += CardToString(card) + " ";
+                    handValue += GetCardValue(card);
+                }
+                int hp = (playerIdx < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[playerIdx] : 0;
+                string labelText = $"[YOU] Player {playerIdx + 1} Hand: {handStr}(Value: {handValue}) | HP: {hp}";
+                var box = new VisualElement();
+                box.AddToClassList("player-hand-box");
+                var label = new Label(labelText);
+                label.AddToClassList("info-label");
+                label.AddToClassList("local-player-label");
+                box.Add(label);
+                localPlayerPanel.Add(box);
+            }
+        }
+        // Show all other players' hands in a separate panel below
+        // (REMOVED DUPLICATE root/otherHandsPanel DECLARATIONS)
+        if (otherPlayerPanel != null)
+        {
+            otherPlayerPanel.Clear();
+            for (int i = 0; i < blackjackManager.PlayerHands.Count; i++)
+            {
+                if (i == playerIdx) continue;
+                unsafe
+                {
+                    var hand = blackjackManager.PlayerHands[i];
+                    int handValue = 0;
+                    string handStr = "";
+                    for (int c = 0; c < hand.count; c++)
+                    {
+                        int card = hand.cards[c];
+                        handStr += CardToString(card) + " ";
+                        handValue += GetCardValue(card);
+                    }
+                    int hp = (i < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[i] : 0;
+                    string labelText = $"Player {i + 1} Hand: {handStr}(Value: {handValue}) | HP: {hp}";
+                    var box = new VisualElement();
+                    box.AddToClassList("player-hand-box");
+                    var label = new Label(labelText);
+                    label.AddToClassList("info-label");
+                    box.Add(label);
+                    otherPlayerPanel.Add(box);
+                }
+            }
+        }
+
+        // Optionally update playerLabel to just show your hand summary
+        if (playerIdx >= 0 && playerIdx < blackjackManager.PlayerHands.Count && playerLabel != null)
         {
             unsafe
             {
@@ -192,28 +256,23 @@ public class BlackjackUIController : MonoBehaviour
                 for (int c = 0; c < hand.count; c++)
                 {
                     int card = hand.cards[c];
-                    var cardLabel = new Label(CardToString(card));
-                    cardLabel.AddToClassList("info-label");
-                    playerHandPanel.Add(cardLabel);
                     handValue += GetCardValue(card);
                 }
                 int hp = (playerIdx < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[playerIdx] : 0;
-                if (playerLabel != null)
-                    playerLabel.text = $"Your Hand (Value: {handValue}) | HP: {hp}";
+                playerLabel.text = $"Your Hand (Value: {handValue}) | HP: {hp}";
             }
         }
         // Show/hide action buttons
-        // Use the already declared gameStateStr
-        if (gameStateStr == "RoundOver" || gameStateStr == "GameOver")
+        // Only enable buttons if it's the local player's turn and the game state is PlayerTurn
+        bool isPlayerTurn = false;
+        Debug.Log($"[UI] UpdateUI: localClientId={Unity.Netcode.NetworkManager.Singleton.LocalClientId}, playerIdx={playerIdx}, CurrentTurnIndex={blackjackManager?.CurrentTurnIndex}, gameStateStr={gameStateStr}");
+        if (gameStateStr == "PlayerTurn" && blackjackManager != null && playerIdx == blackjackManager.CurrentTurnIndex)
         {
-            if (hitButton != null) hitButton.SetEnabled(false);
-            if (standButton != null) hitButton.SetEnabled(false);
+            isPlayerTurn = true;
         }
-        else
-        {
-            if (hitButton != null) hitButton.SetEnabled(true);
-            if (standButton != null) standButton.SetEnabled(true);
-        }
+        Debug.Log($"[UI] Button State: isPlayerTurn={isPlayerTurn}, hitButton={(hitButton != null ? "found" : "null")}, standButton={(standButton != null ? "found" : "null")}");
+        if (hitButton != null) hitButton.SetEnabled(isPlayerTurn);
+        if (standButton != null) standButton.SetEnabled(isPlayerTurn);
     }
 
     private static string CardToString(int card)

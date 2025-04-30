@@ -13,6 +13,7 @@ public class NetworkBlackjackManager : NetworkBehaviour
     private List<int> deck;
     private NetworkList<PlayerHand> playerHands;
     private NetworkVariable<int> currentTurnIndex = new NetworkVariable<int>(0);
+    public int CurrentTurnIndex => currentTurnIndex.Value;
     public NetworkVariable<int> winnerIndex = new NetworkVariable<int>(-1); // -1: no winner yet
     private NetworkList<int> playerHP; // HP for each player
     private NetworkList<byte> playerActions; // Track stand/bust as byte
@@ -57,6 +58,9 @@ public class NetworkBlackjackManager : NetworkBehaviour
             Debug.Log($"[Network] playerActions changed: [{string.Join(",", playerActions)}]");
             OnPlayerListChanged?.Invoke();
         };
+        // Ensure UI updates on host and clients when game state or turn changes
+        gameState.OnValueChanged += (oldVal, newVal) => { OnPlayerListChanged?.Invoke(); };
+        currentTurnIndex.OnValueChanged += (oldVal, newVal) => { OnPlayerListChanged?.Invoke(); };
     }
 
     [ServerRpc(RequireOwnership = false)]
