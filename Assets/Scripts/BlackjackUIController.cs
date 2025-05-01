@@ -9,6 +9,7 @@ public class BlackjackUIController : MonoBehaviour
 
     private Button hitButton;
     private Button standButton;
+    private Button startRoundButton;
     private VisualElement playerHandPanel;
     private VisualElement infoPanel;
     private Label messageLabel;
@@ -39,6 +40,9 @@ public class BlackjackUIController : MonoBehaviour
             messageLabel = root.Q<Label>("MessageLabel");
             playerLabel = root.Q<Label>("PlayerLabel");
             chipsLabel = root.Q<Label>("ChipsLabel");
+            startRoundButton = root.Q<Button>("StartRoundButton");
+            if (startRoundButton != null)
+                startRoundButton.clicked += OnStartRoundClicked;
 
             if (hitButton != null)
                 hitButton.clicked += OnHitClicked;
@@ -60,6 +64,8 @@ public class BlackjackUIController : MonoBehaviour
             hitButton.clicked -= OnHitClicked;
         if (standButton != null)
             standButton.clicked -= OnStandClicked;
+        if (startRoundButton != null)
+            startRoundButton.clicked -= OnStartRoundClicked;
     }
 
     private void OnHitClicked()
@@ -76,10 +82,25 @@ public class BlackjackUIController : MonoBehaviour
             blackjackManager.StandServerRpc();
     }
 
+    private void OnStartRoundClicked()
+    {
+        var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (blackjackManager != null)
+            blackjackManager.StartRoundServerRpc();
+    }
+
     private void UpdateUI()
     {
-        // Multiplayer info
+        // Enable StartRoundButton only if game is over
         var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (startRoundButton != null)
+        {
+            bool isGameOver = blackjackManager != null && blackjackManager.gameState.Value == NetworkBlackjackManager.GameState.GameOver;
+            startRoundButton.SetEnabled(isGameOver);
+            startRoundButton.style.display = isGameOver ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        // Multiplayer info
         string gameStateStr = blackjackManager != null ? blackjackManager.gameState.Value.ToString() : "";
         if (blackjackManager != null && infoPanel != null)
         {

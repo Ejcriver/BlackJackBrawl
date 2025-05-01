@@ -16,6 +16,7 @@ public class NetworkBlackjackManager : NetworkBehaviour
     public int CurrentTurnIndex => currentTurnIndex.Value;
     public NetworkVariable<int> winnerIndex = new NetworkVariable<int>(-1); // -1: no winner yet
     private NetworkList<int> playerHP; // HP for each player
+    private NetworkList<int> playerMaxHP; // Max HP for each player
     private NetworkList<byte> playerActions; // Track stand/bust as byte
     private NetworkList<int> playerChips; // Chips for each player
 
@@ -31,6 +32,7 @@ public class NetworkBlackjackManager : NetworkBehaviour
         playerIds = new NetworkList<ulong>();
         playerHands = new NetworkList<PlayerHand>();
         playerHP = new NetworkList<int>();
+        playerMaxHP = new NetworkList<int>();
         playerActions = new NetworkList<byte>();
         deck = new List<int>();
         playerChips = new NetworkList<int>();
@@ -81,6 +83,7 @@ public class NetworkBlackjackManager : NetworkBehaviour
             playerIds.Add(clientId);
             playerHands.Add(new PlayerHand { count = 0 });
             playerHP.Add(30); // Start with 30 HP
+            playerMaxHP.Add(30); // Start with 30 Max HP
             playerActions.Add((byte)PlayerActionState.None);
             playerChips.Add(0); // Start with 0 chips (or set to desired initial amount)
             Debug.Log($"[JoinTableServerRpc] Added clientId={clientId}. playerIds now: [{string.Join(",", playerIds)}]");
@@ -172,6 +175,21 @@ public class NetworkBlackjackManager : NetworkBehaviour
         return value;
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void BuyMaxHPServerRpc(ulong clientId)
+    {
+        int playerIndex = playerIds.IndexOf(clientId);
+        if (playerIndex >= 0 && playerIndex < playerChips.Count && playerIndex < playerHP.Count && playerIndex < playerMaxHP.Count)
+        {
+            if (playerChips[playerIndex] >= 10)
+            {
+                playerChips[playerIndex] -= 10;
+                playerMaxHP[playerIndex] += 5;
+                playerHP[playerIndex] = playerMaxHP[playerIndex]; // Optionally heal to new max
+                Debug.Log($"[Shop] Player {clientId} bought +5 Max HP. Chips left: {playerChips[playerIndex]}, Max HP: {playerMaxHP[playerIndex]}, HP: {playerHP[playerIndex]}");
+            }
+        }
+    }
     // Player requests to hit
     [ServerRpc(RequireOwnership = false)]
     public void HitServerRpc(ServerRpcParams rpcParams = default)
@@ -327,6 +345,11 @@ public class NetworkBlackjackManager : NetworkBehaviour
         {
             gameState.Value = GameState.GameOver;
             winnerIndex.Value = lastAliveIdx;
+            // Reset all players' HP to their Max HP at GameOver
+            for (int i = 0; i < playerHP.Count && i < playerMaxHP.Count; i++)
+            {
+                playerHP[i] = playerMaxHP[i];
+            }
         }
     }
 

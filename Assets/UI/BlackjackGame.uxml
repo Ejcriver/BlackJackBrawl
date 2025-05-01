@@ -25,6 +25,7 @@
         <ui:VisualElement name="MessagePanel" class="message-panel">
             <ui:Label name="MessageLabel" class="message-label" />
         </ui:VisualElement>
+        <ui:Button name="StartRoundButton" text="Start New Round" class="action-button" />
         <ui:Button name="CloseButton" class="close-button" />
     </ui:VisualElement>
 </ui:UXML>
