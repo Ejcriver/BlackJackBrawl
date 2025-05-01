@@ -17,10 +17,12 @@ public class NetworkBlackjackManager : NetworkBehaviour
     public NetworkVariable<int> winnerIndex = new NetworkVariable<int>(-1); // -1: no winner yet
     private NetworkList<int> playerHP; // HP for each player
     private NetworkList<byte> playerActions; // Track stand/bust as byte
+    private NetworkList<int> playerChips; // Chips for each player
 
     public NetworkList<ulong> PlayerIds => playerIds;
     public NetworkList<PlayerHand> PlayerHands => playerHands;
     public NetworkList<int> PlayerHP => playerHP;
+    public NetworkList<int> PlayerChips => playerChips;
     public int WinnerIndex => winnerIndex.Value; // for UI
 
 
@@ -31,6 +33,7 @@ public class NetworkBlackjackManager : NetworkBehaviour
         playerHP = new NetworkList<int>();
         playerActions = new NetworkList<byte>();
         deck = new List<int>();
+        playerChips = new NetworkList<int>();
     }
 
     public event System.Action OnPlayerListChanged;
@@ -58,6 +61,11 @@ public class NetworkBlackjackManager : NetworkBehaviour
             Debug.Log($"[Network] playerActions changed: [{string.Join(",", playerActions)}]");
             OnPlayerListChanged?.Invoke();
         };
+        playerChips.OnListChanged += (change) =>
+        {
+            Debug.Log($"[Network] playerChips changed: [{string.Join(",", playerChips)}]");
+            OnPlayerListChanged?.Invoke();
+        };
         // Ensure UI updates on host and clients when game state or turn changes
         gameState.OnValueChanged += (oldVal, newVal) => { OnPlayerListChanged?.Invoke(); };
         currentTurnIndex.OnValueChanged += (oldVal, newVal) => { OnPlayerListChanged?.Invoke(); };
@@ -74,6 +82,7 @@ public class NetworkBlackjackManager : NetworkBehaviour
             playerHands.Add(new PlayerHand { count = 0 });
             playerHP.Add(30); // Start with 30 HP
             playerActions.Add((byte)PlayerActionState.None);
+            playerChips.Add(0); // Start with 0 chips (or set to desired initial amount)
             Debug.Log($"[JoinTableServerRpc] Added clientId={clientId}. playerIds now: [{string.Join(",", playerIds)}]");
         }
     }
@@ -102,6 +111,8 @@ public class NetworkBlackjackManager : NetworkBehaviour
         playerActions.Clear();
         for (int i = 0; i < playerHands.Count; i++)
             playerActions.Add((byte)PlayerActionState.None);
+        // Optionally, reset chips at round start (commented out for persistent chips)
+        // for (int i = 0; i < playerChips.Count; i++) playerChips[i] = 0;
         gameState.Value = GameState.PlayerTurn;
         currentTurnIndex.Value = 0;
         winnerIndex.Value = -1;
@@ -273,6 +284,13 @@ public class NetworkBlackjackManager : NetworkBehaviour
         else
         {
             winnerIndex.Value = maxIndex;
+            // Award chips to winner
+            int chipsAwarded = 10; // Set chip reward per win here
+            if (maxIndex >= 0 && maxIndex < playerChips.Count)
+            {
+                playerChips[maxIndex] = playerChips[maxIndex] + chipsAwarded;
+                Debug.Log($"[Chips] Player {maxIndex} awarded {chipsAwarded} chips. Total: {playerChips[maxIndex]}");
+            }
             // Deal damage to all other non-busted, non-eliminated players
             for (int i = 0; i < playerHands.Count; i++)
             {

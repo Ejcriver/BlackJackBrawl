@@ -13,6 +13,7 @@ public class BlackjackUIController : MonoBehaviour
     private VisualElement infoPanel;
     private Label messageLabel;
     private Label playerLabel; // Remove dealerLabel
+    private Label chipsLabel;
     private List<Label> playerInfoLabels = new List<Label>();
 
     void Awake()
@@ -37,6 +38,7 @@ public class BlackjackUIController : MonoBehaviour
             infoPanel = root.Q<VisualElement>("InfoPanel");
             messageLabel = root.Q<Label>("MessageLabel");
             playerLabel = root.Q<Label>("PlayerLabel");
+            chipsLabel = root.Q<Label>("ChipsLabel");
 
             if (hitButton != null)
                 hitButton.clicked += OnHitClicked;
@@ -93,6 +95,22 @@ public class BlackjackUIController : MonoBehaviour
                     if (val is int idx) winnerIdx = idx;
                 }
             }
+
+            // Show local player's chip count
+            ulong localClientId = Unity.Netcode.NetworkManager.Singleton.LocalClientId;
+            int localPlayerIdx = blackjackManager.PlayerIds.IndexOf(localClientId);
+            int chips = (localPlayerIdx >= 0 && localPlayerIdx < blackjackManager.PlayerChips.Count) ? blackjackManager.PlayerChips[localPlayerIdx] : 0;
+            if (chipsLabel != null)
+                chipsLabel.text = $"Chips: {chips}";
+
+            // Optionally, show chip counts for all players in InfoPanel
+            for (int i = 0; i < blackjackManager.PlayerHands.Count; i++)
+            {
+                int playerChips = (i < blackjackManager.PlayerChips.Count) ? blackjackManager.PlayerChips[i] : 0;
+                var chipLabel = new Label($"Player {i + 1} Chips: {playerChips}");
+                infoPanel.Add(chipLabel);
+            }
+
             for (int i = 0; i < blackjackManager.PlayerHands.Count; i++)
             {
                 unsafe
@@ -114,6 +132,7 @@ public class BlackjackUIController : MonoBehaviour
                     infoPanel.Add(label);
                 }
             }
+
             // Show PvP round result
             if (gameStateStr == "RoundOver")
             {
@@ -177,12 +196,12 @@ public class BlackjackUIController : MonoBehaviour
             localPlayerPanel.Clear();
         // Find local player index
         var networkManager = Unity.Netcode.NetworkManager.Singleton;
-        ulong localClientId = networkManager != null ? networkManager.LocalClientId : 0;
+        ulong myLocalClientId = networkManager != null ? networkManager.LocalClientId : 0;
         int playerIdx = -1;
-        Debug.Log($"[UI] UpdateUI called. localClientId={localClientId}, playerIds=[{string.Join(",", blackjackManager.PlayerIds)}]");
+        Debug.Log($"[UI] UpdateUI called. myLocalClientId={myLocalClientId}, playerIds=[{string.Join(",", blackjackManager.PlayerIds)}]");
         for (int i = 0; i < blackjackManager.PlayerIds.Count; i++)
         {
-            if (blackjackManager.PlayerIds[i] == localClientId)
+            if (blackjackManager.PlayerIds[i] == myLocalClientId)
             {
                 playerIdx = i;
                 break;

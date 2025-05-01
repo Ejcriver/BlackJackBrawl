@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/BlackjackGame.uss" />
+    <ui:VisualElement name="ShopRoot" class="shop-root">
+        <ui:Label name="ShopTitleLabel" class="section-label" text="Shop" />
+        <ui:Label name="ShopChipsLabel" class="info-label" text="Chips: 0" />
+        <ui:VisualElement name="ShopItemsPanel" class="shop-items-panel" />
+        <ui:Button name="CloseShopButton" text="Close" class="close-button" />
+    </ui:VisualElement>
+</ui:UXML>
