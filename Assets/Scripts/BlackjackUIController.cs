@@ -211,10 +211,12 @@ public class BlackjackUIController : MonoBehaviour
         // Use DealerPanel for local player's hand and OtherHandsPanel for others
         // Only declare these ONCE at the top of the method to avoid CS0128 errors
         var root = blackjackUIDocument != null ? blackjackUIDocument.rootVisualElement : null;
-        var localPlayerPanel = root != null ? root.Q<VisualElement>("LocalPlayerPanel") : null;
-        var otherPlayerPanel = root != null ? root.Q<VisualElement>("OtherPlayerPanel") : null;
-        if (localPlayerPanel != null)
-            localPlayerPanel.Clear();
+        var localHandPanel = root != null ? root.Q<VisualElement>("LocalPlayerHand") : null;
+        var otherHandPanel = root != null ? root.Q<VisualElement>("OtherPlayerHand") : null;
+        if (localHandPanel != null)
+            localHandPanel.Clear();
+        if (otherHandPanel != null)
+            otherHandPanel.Clear();
         // Find local player index
         var networkManager = Unity.Netcode.NetworkManager.Singleton;
         ulong myLocalClientId = networkManager != null ? networkManager.LocalClientId : 0;
@@ -230,58 +232,52 @@ public class BlackjackUIController : MonoBehaviour
         }
         Debug.Log($"[UI] Calculated playerIdx={playerIdx}");
 
-        // Show ONLY the local player's hand in LocalPlayerPanel
-        if (localPlayerPanel != null && playerIdx >= 0 && playerIdx < blackjackManager.PlayerHands.Count)
+        // Show ONLY the local player's hand as card images in LocalPlayerHand
+        if (localHandPanel != null && playerIdx >= 0 && playerIdx < blackjackManager.PlayerHands.Count)
         {
             unsafe
             {
                 var hand = blackjackManager.PlayerHands[playerIdx];
-                int handValue = 0;
-                string handStr = "";
                 for (int c = 0; c < hand.count; c++)
                 {
                     int card = hand.cards[c];
-                    handStr += CardToString(card) + " ";
-                    handValue += GetCardValue(card);
+                    string spritePath = SpawnedCardHelper.CardIntToSpritePath(card);
+                    var sprite = Resources.Load<Sprite>(spritePath);
+                    var img = new Image();
+                    img.sprite = sprite;
+                    img.style.width = 80;
+                    img.style.height = 120;
+                    img.AddToClassList("card-image");
+                    localHandPanel.Add(img);
                 }
-                int hp = (playerIdx < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[playerIdx] : 0;
-                string labelText = $"[YOU] Player {playerIdx + 1} Hand: {handStr}(Value: {handValue}) | HP: {hp}";
-                var box = new VisualElement();
-                box.AddToClassList("player-hand-box");
-                var label = new Label(labelText);
-                label.AddToClassList("info-label");
-                label.AddToClassList("local-player-label");
-                box.Add(label);
-                localPlayerPanel.Add(box);
             }
         }
-        // Show all other players' hands in a separate panel below
-        // (REMOVED DUPLICATE root/otherHandsPanel DECLARATIONS)
-        if (otherPlayerPanel != null)
+        // Show all other players' hands as card images in OtherPlayerHand
+        if (otherHandPanel != null)
         {
-            otherPlayerPanel.Clear();
+            otherHandPanel.Clear();
             for (int i = 0; i < blackjackManager.PlayerHands.Count; i++)
             {
                 if (i == playerIdx) continue;
                 unsafe
                 {
                     var hand = blackjackManager.PlayerHands[i];
-                    int handValue = 0;
-                    string handStr = "";
+                    var row = new VisualElement();
+                    row.style.flexDirection = FlexDirection.Row;
+                    row.AddToClassList("opponent-hand-row");
                     for (int c = 0; c < hand.count; c++)
                     {
                         int card = hand.cards[c];
-                        handStr += CardToString(card) + " ";
-                        handValue += GetCardValue(card);
+                        string spritePath = SpawnedCardHelper.CardIntToSpritePath(card);
+                        var sprite = Resources.Load<Sprite>(spritePath);
+                        var img = new Image();
+                        img.sprite = sprite;
+                        img.style.width = 80;
+                        img.style.height = 120;
+                        img.AddToClassList("card-image");
+                        row.Add(img);
                     }
-                    int hp = (i < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[i] : 0;
-                    string labelText = $"Player {i + 1} Hand: {handStr}(Value: {handValue}) | HP: {hp}";
-                    var box = new VisualElement();
-                    box.AddToClassList("player-hand-box");
-                    var label = new Label(labelText);
-                    label.AddToClassList("info-label");
-                    box.Add(label);
-                    otherPlayerPanel.Add(box);
+                    otherHandPanel.Add(row);
                 }
             }
         }
