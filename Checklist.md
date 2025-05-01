@@ -49,7 +49,7 @@
     - [ ] Power cards, chips, and advanced rules (in progress)
     - [ ] Design power card types and effects
     - [ ] Implement power card logic in game flow
-    - [ ] Add chip earning/spending logic
+    - [x] Add chip earning/spending logic
     - [ ] Integrate advanced rules (e.g., special win conditions)
     - [ ] Update UI to support new features
 - [ ] Players draw from a **13-card deck** (standard cards + power cards).
@@ -128,9 +128,9 @@
     - [x] Update UI to reflect chip changes
 - [ ] Chips can be used to:
     - [ ] Implement shop UI for buying/removing cards
-    - [ ] Deduct chips on purchase/removal
-    - [ ] Network chip and deck changes
-    - [ ] Update UI for transactions
+    - [x] Deduct chips on purchase/removal
+    - [x] Network chip and deck changes
+    - [x] Update UI for transactions
   
 ### Deck System:
 - [ ] Players start with a **13-card deck**.
@@ -152,10 +152,10 @@
     - [ ] Bind UI to networked variables
     - [ ] Add interactivity for card and chip actions
     - [ ] Test UI with multiple players
-- [ ] **Chip Counter** (networked variable display).
-    - [ ] Add chip counter to UI
-    - [ ] Bind to networked chip variable
-    - [ ] Update in real-time
+- [x] **Chip Counter** (networked variable display).
+    - [x] Add chip counter to UI
+    - [x] Bind to networked chip variable
+    - [x] Update in real-time
 - [ ] **Power Card Button Bar** (click to activate).
     - [ ] Design button bar UI
     - [ ] Connect buttons to power card logic
