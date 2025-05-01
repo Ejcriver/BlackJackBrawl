@@ -204,8 +204,15 @@ public class NetworkBlackjackManager : NetworkBehaviour
             return; // Not this player's turn
         }
         var hand = playerHands[playerIndex];
-        hand.Add(DrawCard());
+        int card = DrawCard();
+        hand.Add(card);
         playerHands[playerIndex] = hand;
+
+        // --- Spawn networked card sprite ---
+        Vector3 spawnPos = new Vector3(playerIndex * 2.0f, 1.0f, hand.count * 0.3f); // Simple offset
+        SpawnedCardHelper.SpawnNetworkCard(card, spawnPos, Quaternion.identity);
+        // --- End spawn ---
+
         // If bust, mark action as Bust and resolve round
         if (HandValue(hand) > 21)
         {
