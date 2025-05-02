@@ -71,6 +71,9 @@ public class BlackjackUIController : MonoBehaviour
 
             // Subscribe to deck event for non-hosts
             NetworkBlackjackManager.OnDeckReceivedFromHost += OnDeckReceivedFromHost;
+            // Dynamically update deck popup if open
+            if (blackjackManager != null)
+                blackjackManager.OnPlayerListChanged += OnDeckMaybeChanged;
 
             // Add Deck Popup (hidden by default)
             if (deckPopup == null)
@@ -128,6 +131,46 @@ public class BlackjackUIController : MonoBehaviour
         if (showDeckButton != null)
             showDeckButton.clicked -= OnShowDeckClicked;
         NetworkBlackjackManager.OnDeckReceivedFromHost -= OnDeckReceivedFromHost;
+        var managerForUnsubscribe = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (managerForUnsubscribe != null)
+            managerForUnsubscribe.OnPlayerListChanged -= OnDeckMaybeChanged;
+    }
+
+    // Called when the deck might have changed
+    private void OnDeckMaybeChanged()
+    {
+        // Only update if popup is visible
+        if (deckPopup == null || deckPopup.style.display != DisplayStyle.Flex)
+            return;
+        var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (blackjackManager == null) return;
+        // Find local player index
+        ulong myLocalClientId = Unity.Netcode.NetworkManager.Singleton.LocalClientId;
+        int playerIdx = -1;
+        for (int i = 0; i < blackjackManager.PlayerIds.Count; i++)
+        {
+            if (blackjackManager.PlayerIds[i] == myLocalClientId)
+            {
+                playerIdx = i;
+                break;
+            }
+        }
+        if (playerIdx < 0 || playerIdx >= blackjackManager.PlayerIds.Count) return;
+        // If host, refresh deck directly
+        if (NetworkManager.Singleton.IsHost || NetworkManager.Singleton.IsServer)
+        {
+            var deckField = typeof(NetworkBlackjackManager).GetField("playerDecks", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (deckField == null) return;
+            var decksObj = deckField.GetValue(blackjackManager) as List<List<CardData>>;
+            if (decksObj == null || playerIdx >= decksObj.Count) return;
+            var deck = decksObj[playerIdx];
+            OnDeckReceivedFromHost(deck);
+        }
+        else
+        {
+            // Non-host: re-request deck from host
+            blackjackManager.RequestDeckFromHostServerRpc(playerIdx);
+        }
     }
 
     // Handler for deck received from host
@@ -139,9 +182,12 @@ public class BlackjackUIController : MonoBehaviour
         deckListScroll.style.backgroundColor = new StyleColor(new Color(0.93f, 0.93f, 1f, 0.98f));
         deckListScroll.style.color = Color.black;
         deckListScroll.Clear();
-        for (int i = 0; i < deck.Count; i++)
+        // Sort deck by value ascending
+        var sortedDeck = new List<CardData>(deck);
+        sortedDeck.Sort((a, b) => a.value.CompareTo(b.value));
+        for (int i = 0; i < sortedDeck.Count; i++)
         {
-            var card = deck[i];
+            var card = sortedDeck[i];
             var cardLabel = new Label($"{CardToString(card.value)} (Type: {card.cardType}, Suit: {card.suit}, PowerId: {card.powerId})");
             cardLabel.style.color = Color.black;
             deckListScroll.Add(cardLabel);
