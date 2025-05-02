@@ -320,8 +320,7 @@ public class BlackjackUIController : MonoBehaviour
             if (localPlayerIdx >= 0 && localPlayerIdx < blackjackManager.PlayerHands.Count)
             {
                 var hand = blackjackManager.PlayerHands[localPlayerIdx];
-                int handValue = 0;
-                unsafe { for (int c = 0; c < hand.count; c++) handValue += GetCardValue(hand.Get(c).value); }
+                int handValue = GetBlackjackHandValue(hand);
                 int hp = (localPlayerIdx < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[localPlayerIdx] : 0;
                 int chips = (localPlayerIdx < blackjackManager.PlayerChips.Count) ? blackjackManager.PlayerChips[localPlayerIdx] : 0;
                 if (handValueLabel != null) handValueLabel.text = $"Hand Value: {handValue}";
@@ -337,8 +336,7 @@ public class BlackjackUIController : MonoBehaviour
             if (otherIdx >= 0 && otherIdx < blackjackManager.PlayerHands.Count)
             {
                 var hand = blackjackManager.PlayerHands[otherIdx];
-                int handValue = 0;
-                unsafe { for (int c = 0; c < hand.count; c++) handValue += GetCardValue(hand.Get(c).value); }
+                int handValue = GetBlackjackHandValue(hand);
                 int hp = (otherIdx < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[otherIdx] : 0;
                 int chips = (otherIdx < blackjackManager.PlayerChips.Count) ? blackjackManager.PlayerChips[otherIdx] : 0;
                 if (otherHandValueLabel != null) otherHandValueLabel.text = $"Hand Value: {handValue}";
@@ -382,13 +380,12 @@ public class BlackjackUIController : MonoBehaviour
                 {
                     var hand = blackjackManager.PlayerHands[i];
                     string handStr = "";
-                    int handValue = 0;
                     for (int c = 0; c < hand.count; c++)
                     {
                         CardData card = hand.Get(c);
                         handStr += CardToString(card.value) + " ";
-                        handValue += GetCardValue(card.value);
                     }
+                    int handValue = GetBlackjackHandValue(hand);
                     int hp = (i < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[i] : 0;
                     string winnerNote = (winnerIdx == i) ? " [WINNER]" : "";
                     string eliminatedNote = (hp <= 0) ? " [ELIMINATED]" : "";
@@ -414,7 +411,7 @@ public class BlackjackUIController : MonoBehaviour
                     unsafe
                     {
                         var winnerHand = blackjackManager.PlayerHands[winnerIdx];
-                        for (int c = 0; c < winnerHand.count; c++) winnerVal += GetCardValue(winnerHand.Get(c).value);
+                        winnerVal = GetBlackjackHandValue(winnerHand);
                         winnerCardCount = winnerHand.count;
                     }
                     string damageInfo = "";
@@ -426,7 +423,7 @@ public class BlackjackUIController : MonoBehaviour
                         unsafe
                         {
                             var loserHand = blackjackManager.PlayerHands[i];
-                            for (int c = 0; c < loserHand.count; c++) loserVal += GetCardValue(loserHand.Get(c).value);
+                            loserVal = GetBlackjackHandValue(loserHand);
                         }
                         if (loserVal > 21) loserVal = 0;
                         if (hp <= 0) continue;
@@ -538,8 +535,8 @@ public class BlackjackUIController : MonoBehaviour
                 {
                     CardData card = hand.Get(c);
                     handStr += CardToString(card.value) + " ";
-                    handValue += GetCardValue(card.value);
                 }
+                handValue = GetBlackjackHandValue(hand);
                 int hp = (playerIdx < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[playerIdx] : 0;
                 playerLabel.text = $"Your Hand (Value: {handValue}) | HP: {hp}";
             }
@@ -571,10 +568,37 @@ public class BlackjackUIController : MonoBehaviour
 
     private static int GetCardValue(int card)
     {
-        // Blackjack: Ace is 1, J/Q/K are 10, others are face value
+        // For single card display only (not for hand value)
         if (card == 1) return 1;
         if (card >= 11 && card <= 13) return 10;
         return card;
+    }
+
+    private static int GetBlackjackHandValue(PlayerHand hand)
+    {
+        int value = 0;
+        int aces = 0;
+        System.Text.StringBuilder handLog = new System.Text.StringBuilder();
+        unsafe
+        {
+            for (int i = 0; i < hand.count; i++)
+            {
+                CardData card = hand.Get(i);
+                handLog.Append(card.value + ",");
+                if (card.value == 1) aces++;
+                value += (card.value > 10) ? 10 : card.value;
+            }
+        }
+        int initialValue = value;
+        int initialAces = aces;
+        // Handle ace as 11 if possible
+        while (aces > 0 && value <= 11)
+        {
+            value += 10;
+            aces--;
+        }
+        Debug.Log($"[GetBlackjackHandValue] Hand: [{handLog}] | InitialValue: {initialValue} | InitialAces: {initialAces} | FinalValue: {value}");
+        return value;
     }
 
     // Multiplayer debug UI for development
@@ -674,13 +698,12 @@ public class BlackjackUIController : MonoBehaviour
                 {
                     var hand = blackjackManager.PlayerHands[i];
                     string handStr = "";
-                    int handValue = 0;
                     for (int c = 0; c < hand.count; c++)
                     {
                         CardData card = hand.Get(c);
                         handStr += CardToString(card.value) + " ";
-                        handValue += GetCardValue(card.value);
                     }
+                    int handValue = GetBlackjackHandValue(hand);
                     int hp = (i < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[i] : 0;
                     string winnerNote = (winnerIdx == i) ? " [WINNER]" : "";
                     string eliminatedNote = (hp <= 0) ? " [ELIMINATED]" : "";
@@ -703,7 +726,7 @@ public class BlackjackUIController : MonoBehaviour
                     unsafe
                     {
                         var winnerHand = blackjackManager.PlayerHands[winnerIdx];
-                        for (int c = 0; c < winnerHand.count; c++) winnerVal += GetCardValue(winnerHand.Get(c).value);
+                        winnerVal = GetBlackjackHandValue(winnerHand);
                         winnerCardCount = winnerHand.count;
                     }
                     string damageInfo = "";
@@ -715,7 +738,7 @@ public class BlackjackUIController : MonoBehaviour
                         unsafe
                         {
                             var loserHand = blackjackManager.PlayerHands[i];
-                            for (int c = 0; c < loserHand.count; c++) loserVal += GetCardValue(loserHand.Get(c).value);
+                            loserVal = GetBlackjackHandValue(loserHand);
                         }
                         if (loserVal > 21 || hp <= 0) continue;
                         int dmg = winnerVal - loserVal;
