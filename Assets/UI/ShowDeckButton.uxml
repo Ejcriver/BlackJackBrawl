@@ -1,0 +1,3 @@
+<engine:UXML xmlns:engine="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Button name="ShowDeckButton" text="Show Deck" style="margin-top: 8px; width: 120px;" />
+</engine:UXML>

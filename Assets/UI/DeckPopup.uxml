@@ -1,0 +1,8 @@
+<engine:UXML xmlns:engine="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <VisualElement name="DeckPopup" style="flex-direction: column; background-color: #222C; padding: 12px; border-radius: 8px; min-width: 220px; min-height: 80px; align-items: flex-start;">
+        <Label name="DeckPopupTitle" text="Your Deck" style="unity-font-style: bold; font-size: 16px; margin-bottom: 8px;" />
+        <ScrollView name="DeckListScroll" style="height: 180px; min-width: 180px; background-color: #111A; border-radius: 4px; margin-bottom: 8px;">
+        </ScrollView>
+        <Button name="CloseDeckPopupButton" text="Close" style="align-self: flex-end; margin-top: 8px; width: 80px;" />
+    </VisualElement>
+</engine:UXML>

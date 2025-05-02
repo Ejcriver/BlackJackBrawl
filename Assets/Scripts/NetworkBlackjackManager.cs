@@ -5,12 +5,16 @@ using UnityEngine;
 
 public class NetworkBlackjackManager : NetworkBehaviour
 {
+    // For deck popup sync
+    public static System.Action<List<CardData>> OnDeckReceivedFromHost;
+
     public enum GameState : byte { Waiting, Dealing, PlayerTurn, RoundOver, GameOver }
 
     // Networked state
     public NetworkVariable<GameState> gameState = new NetworkVariable<GameState>(GameState.Waiting);
     private NetworkList<ulong> playerIds;
-    private List<int> deck;
+    // Per-player decks for custom cards and power cards
+    private List<List<CardData>> playerDecks = new List<List<CardData>>(); // All player decks now use CardData
     private NetworkList<PlayerHand> playerHands;
     private NetworkVariable<int> currentTurnIndex = new NetworkVariable<int>(0);
     public int CurrentTurnIndex => currentTurnIndex.Value;
@@ -21,6 +25,8 @@ public class NetworkBlackjackManager : NetworkBehaviour
     private NetworkList<int> playerChips; // Chips for each player
 
     public NetworkList<ulong> PlayerIds => playerIds;
+
+
     public NetworkList<PlayerHand> PlayerHands => playerHands;
     public NetworkList<int> PlayerHP => playerHP;
     public NetworkList<int> PlayerChips => playerChips;
@@ -34,7 +40,7 @@ public class NetworkBlackjackManager : NetworkBehaviour
         playerHP = new NetworkList<int>();
         playerMaxHP = new NetworkList<int>();
         playerActions = new NetworkList<byte>();
-        deck = new List<int>();
+        playerDecks = new List<List<CardData>>();
         playerChips = new NetworkList<int>();
     }
 
@@ -86,6 +92,12 @@ public class NetworkBlackjackManager : NetworkBehaviour
             playerMaxHP.Add(30); // Start with 30 Max HP
             playerActions.Add((byte)PlayerActionState.None);
             playerChips.Add(0); // Start with 0 chips (or set to desired initial amount)
+            // Create a new deck for this player (1–13, one of each card)
+            var playerDeck = new List<CardData>();
+            for (int value = 1; value <= 13; value++)
+                playerDeck.Add(new CardData { cardType = CardType.Standard, value = value, suit = 0, powerId = 0 });
+            Shuffle(playerDeck);
+            playerDecks.Add(playerDeck);
             Debug.Log($"[JoinTableServerRpc] Added clientId={clientId}. playerIds now: [{string.Join(",", playerIds)}]");
         }
     }
@@ -94,20 +106,26 @@ public class NetworkBlackjackManager : NetworkBehaviour
     public void StartRoundServerRpc()
     {
         if (!IsServer) return;
-        // Reset deck and player hands
-        deck = CreateDeck();
+        // Reset all player decks and hands
+        for (int i = 0; i < playerDecks.Count; i++)
+        {
+            playerDecks[i].Clear();
+            for (int value = 1; value <= 13; value++)
+                playerDecks[i].Add(new CardData { cardType = CardType.Standard, value = value, suit = 0, powerId = 0 });
+            Shuffle(playerDecks[i]);
+        }
         for (int i = 0; i < playerHands.Count; i++)
         {
             var hand = playerHands[i];
             hand.Clear();
             playerHands[i] = hand;
         }
-        // Deal two cards to each player
+        // Deal two cards to each player from their own deck
         for (int i = 0; i < playerHands.Count; i++)
         {
             var hand = playerHands[i];
-            hand.Add(DrawCard());
-            hand.Add(DrawCard());
+            hand.Add(DrawCard(i));
+            hand.Add(DrawCard(i));
             playerHands[i] = hand;
         }
         // Reset player action states
@@ -121,33 +139,34 @@ public class NetworkBlackjackManager : NetworkBehaviour
         winnerIndex.Value = -1;
     }
 
-    private List<int> CreateDeck()
+    // Shuffle helper for per-player decks
+    private void Shuffle(List<CardData> deck)
     {
-        var newDeck = new List<int>(52);
-        // Add four of each card value (1-13)
-        for (int value = 1; value <= 13; value++)
-        {
-            for (int suit = 0; suit < 4; suit++)
-            {
-                newDeck.Add(value);
-            }
-        }
-        // Shuffle deck using Fisher-Yates
-        for (int i = newDeck.Count - 1; i > 0; i--)
+        for (int i = deck.Count - 1; i > 0; i--)
         {
             int j = Random.Range(0, i + 1);
-            int temp = newDeck[i];
-            newDeck[i] = newDeck[j];
-            newDeck[j] = temp;
+            CardData temp = deck[i];
+            deck[i] = deck[j];
+            deck[j] = temp;
         }
-        return newDeck;
     }
 
-    private int DrawCard()
+    // Draw a card from a player's deck (by player index)
+    private CardData DrawCard(int playerIdx)
     {
-        if (deck.Count == 0) deck = CreateDeck();
+        if (playerIdx < 0 || playerIdx >= playerDecks.Count)
+            return default;
+        var deck = playerDecks[playerIdx];
+        if (deck.Count == 0)
+        {
+            // Optionally: reshuffle discard pile or prevent draw
+            // For now, just refill with a new 1–13 deck
+            for (int value = 1; value <= 13; value++)
+                deck.Add(new CardData { cardType = CardType.Standard, value = value, suit = 0, powerId = 0 });
+            Shuffle(deck);
+        }
         int idx = Random.Range(0, deck.Count);
-        int card = deck[idx];
+        CardData card = deck[idx];
         deck.RemoveAt(idx);
         return card;
     }
@@ -161,9 +180,9 @@ public class NetworkBlackjackManager : NetworkBehaviour
         {
             for (int i = 0; i < hand.count; i++)
             {
-                int v = hand.cards[i];
-                if (v == 1) aces++;
-                value += v > 10 ? 10 : v;
+                CardData card = hand.Get(i);
+                if (card.value == 1) aces++;
+                value += card.value > 10 ? 10 : card.value;
             }
         }
         // Handle ace as 11 if possible
@@ -204,13 +223,13 @@ public class NetworkBlackjackManager : NetworkBehaviour
             return; // Not this player's turn
         }
         var hand = playerHands[playerIndex];
-        int card = DrawCard();
+        CardData card = DrawCard(playerIndex);
         hand.Add(card);
         playerHands[playerIndex] = hand;
 
         // --- Spawn networked card sprite ---
         Vector3 spawnPos = new Vector3(playerIndex * 2.0f, 1.0f, hand.count * 0.3f); // Simple offset
-        SpawnedCardHelper.SpawnNetworkCard(card, spawnPos, Quaternion.identity);
+        SpawnedCardHelper.SpawnNetworkCard(card.value, spawnPos, Quaternion.identity);
         // --- End spawn ---
 
         // If bust, mark action as Bust and resolve round
@@ -367,4 +386,28 @@ public class NetworkBlackjackManager : NetworkBehaviour
     }
 
     public enum PlayerActionState : byte { None, Stand, Bust }
+
+
+    [ServerRpc(RequireOwnership = false)]
+    public void RequestDeckFromHostServerRpc(int playerIdx, ServerRpcParams rpcParams = default)
+    {
+        // Only host/server executes this
+        if (!IsServer) return;
+        if (playerIdx < 0 || playerIdx >= playerDecks.Count) return;
+        var deck = playerDecks[playerIdx];
+        // Serialize deck to array for network
+        CardData[] deckArr = deck.ToArray();
+        ulong clientId = rpcParams.Receive.SenderClientId;
+        ReceiveDeckClientRpc(deckArr, new ClientRpcParams { Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { clientId } } });
+    }
+
+    [ClientRpc]
+    public void ReceiveDeckClientRpc(CardData[] deckArr, ClientRpcParams clientRpcParams = default)
+    {
+        // Only non-hosts care
+        if (OnDeckReceivedFromHost != null)
+        {
+            OnDeckReceivedFromHost(new List<CardData>(deckArr));
+        }
+    }
 }

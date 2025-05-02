@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.UIElements;
+using Unity.Netcode;
 
 public class BlackjackUIController : MonoBehaviour
 {
@@ -16,6 +17,13 @@ public class BlackjackUIController : MonoBehaviour
     private Label playerLabel; // Remove dealerLabel
     private Label chipsLabel;
     private List<Label> playerInfoLabels = new List<Label>();
+
+    // Deck UI
+    private Button showDeckButton;
+    private VisualElement deckPopup;
+    private ScrollView deckListScroll;
+    private Button closeDeckPopupButton;
+
 
     void Awake()
     {
@@ -49,6 +57,57 @@ public class BlackjackUIController : MonoBehaviour
             if (standButton != null)
                 standButton.clicked += OnStandClicked;
 
+            // Add Show Deck button
+            showDeckButton = root.Q<Button>("ShowDeckButton");
+            if (showDeckButton == null)
+            {
+                // Dynamically add if not in UXML
+                showDeckButton = new Button() { name = "ShowDeckButton", text = "Show Deck" };
+                showDeckButton.style.marginTop = 8;
+                showDeckButton.style.width = 120;
+                root.Add(showDeckButton);
+            }
+            showDeckButton.clicked += OnShowDeckClicked;
+
+            // Subscribe to deck event for non-hosts
+            NetworkBlackjackManager.OnDeckReceivedFromHost += OnDeckReceivedFromHost;
+
+            // Add Deck Popup (hidden by default)
+            if (deckPopup == null)
+            {
+                var deckPopupAsset = Resources.Load<VisualTreeAsset>("UI/DeckPopup");
+                if (deckPopupAsset != null)
+                {
+                    deckPopup = deckPopupAsset.Instantiate();
+                    deckPopup.style.display = DisplayStyle.None;
+                    deckListScroll = deckPopup.Q<ScrollView>("DeckListScroll");
+                    closeDeckPopupButton = deckPopup.Q<Button>("CloseDeckPopupButton");
+                    if (closeDeckPopupButton != null)
+                        closeDeckPopupButton.clicked += () => deckPopup.style.display = DisplayStyle.None;
+                    root.Add(deckPopup);
+                }
+                else
+                {
+                    // fallback: create popup manually
+                    deckPopup = new VisualElement { name = "DeckPopup" };
+                    deckPopup.style.display = DisplayStyle.None;
+                    deckPopup.style.flexDirection = FlexDirection.Column;
+                    deckPopup.style.backgroundColor = new StyleColor(new Color(0.13f,0.13f,0.13f,0.85f));
+                    deckPopup.style.paddingLeft = 12; deckPopup.style.paddingRight = 12; deckPopup.style.paddingTop = 12; deckPopup.style.paddingBottom = 12;
+                    // deckPopup.style.borderRadius = 8; // Not supported in runtime UI Toolkit
+                    deckPopup.style.minWidth = 220;
+                    deckPopup.style.minHeight = 80;
+                    var title = new Label("Your Deck") { style = { unityFontStyleAndWeight = FontStyle.Bold, fontSize = 16, marginBottom = 8 } };
+                    deckListScroll = new ScrollView { name = "DeckListScroll", style = { height = 180, minWidth = 180, backgroundColor = new StyleColor(new Color(0.07f,0.07f,0.07f,0.7f)), marginBottom = 8 } };
+// Rounded corners not supported in runtime UI Toolkit, can be added via USS if needed.
+                    closeDeckPopupButton = new Button(() => deckPopup.style.display = DisplayStyle.None) { text = "Close", style = { alignSelf = Align.FlexEnd, marginTop = 8, width = 80 } };
+                    deckPopup.Add(title);
+                    deckPopup.Add(deckListScroll);
+                    deckPopup.Add(closeDeckPopupButton);
+                    root.Add(deckPopup);
+                }
+            }
+
             UpdateUI();
         }
     }
@@ -66,6 +125,81 @@ public class BlackjackUIController : MonoBehaviour
             standButton.clicked -= OnStandClicked;
         if (startRoundButton != null)
             startRoundButton.clicked -= OnStartRoundClicked;
+        if (showDeckButton != null)
+            showDeckButton.clicked -= OnShowDeckClicked;
+        NetworkBlackjackManager.OnDeckReceivedFromHost -= OnDeckReceivedFromHost;
+    }
+
+    // Handler for deck received from host
+    private void OnDeckReceivedFromHost(List<CardData> deck)
+    {
+        // Set popup style for readability
+        deckPopup.style.backgroundColor = new StyleColor(new Color(0.95f, 0.95f, 0.98f, 0.98f));
+        deckPopup.style.color = Color.black;
+        deckListScroll.style.backgroundColor = new StyleColor(new Color(0.93f, 0.93f, 1f, 0.98f));
+        deckListScroll.style.color = Color.black;
+        deckListScroll.Clear();
+        for (int i = 0; i < deck.Count; i++)
+        {
+            var card = deck[i];
+            var cardLabel = new Label($"{CardToString(card.value)} (Type: {card.cardType}, Suit: {card.suit}, PowerId: {card.powerId})");
+            cardLabel.style.color = Color.black;
+            deckListScroll.Add(cardLabel);
+        }
+        deckPopup.style.display = DisplayStyle.Flex;
+    }
+
+    // Show Deck button click handler
+    private void OnShowDeckClicked()
+    {
+        var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (blackjackManager == null || deckListScroll == null) return;
+        // Find local player index
+        ulong myLocalClientId = Unity.Netcode.NetworkManager.Singleton.LocalClientId;
+        int playerIdx = -1;
+        for (int i = 0; i < blackjackManager.PlayerIds.Count; i++)
+        {
+            if (blackjackManager.PlayerIds[i] == myLocalClientId)
+            {
+                playerIdx = i;
+                break;
+            }
+        }
+        if (playerIdx < 0 || playerIdx >= blackjackManager.PlayerIds.Count) return;
+        // Set popup style for readability
+        deckPopup.style.backgroundColor = new StyleColor(new Color(0.95f, 0.95f, 0.98f, 0.98f));
+        deckPopup.style.color = Color.black;
+        deckListScroll.style.backgroundColor = new StyleColor(new Color(0.93f, 0.93f, 1f, 0.98f));
+        deckListScroll.style.color = Color.black;
+
+        // If host, get deck directly
+        if (NetworkManager.Singleton.IsHost || NetworkManager.Singleton.IsServer)
+        {
+            var deckField = typeof(NetworkBlackjackManager).GetField("playerDecks", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (deckField == null) return;
+            var decksObj = deckField.GetValue(blackjackManager) as List<List<CardData>>;
+            if (decksObj == null || playerIdx >= decksObj.Count) return;
+            var deck = decksObj[playerIdx];
+            deckListScroll.Clear();
+            for (int i = 0; i < deck.Count; i++)
+            {
+                var card = deck[i];
+                var cardLabel = new Label($"{CardToString(card.value)} (Type: {card.cardType}, Suit: {card.suit}, PowerId: {card.powerId})");
+                cardLabel.style.color = Color.black;
+                deckListScroll.Add(cardLabel);
+            }
+            deckPopup.style.display = DisplayStyle.Flex;
+        }
+        else
+        {
+            // Non-host: request deck from host
+            deckListScroll.Clear();
+            var loadingLabel = new Label("Loading deck from host...");
+            loadingLabel.style.color = Color.black;
+            deckListScroll.Add(loadingLabel);
+            deckPopup.style.display = DisplayStyle.Flex;
+            blackjackManager.RequestDeckFromHostServerRpc(playerIdx);
+        }
     }
 
     private void OnHitClicked()
@@ -141,9 +275,9 @@ public class BlackjackUIController : MonoBehaviour
                     int handValue = 0;
                     for (int c = 0; c < hand.count; c++)
                     {
-                        int card = hand.cards[c];
-                        handStr += CardToString(card) + " ";
-                        handValue += GetCardValue(card);
+                        CardData card = hand.Get(c);
+                        handStr += CardToString(card.value) + " ";
+                        handValue += GetCardValue(card.value);
                     }
                     int hp = (i < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[i] : 0;
                     string winnerNote = (winnerIdx == i) ? " [WINNER]" : "";
@@ -170,7 +304,7 @@ public class BlackjackUIController : MonoBehaviour
                     unsafe
                     {
                         var winnerHand = blackjackManager.PlayerHands[winnerIdx];
-                        for (int c = 0; c < winnerHand.count; c++) winnerVal += GetCardValue(winnerHand.cards[c]);
+                        for (int c = 0; c < winnerHand.count; c++) winnerVal += GetCardValue(winnerHand.Get(c).value);
                         winnerCardCount = winnerHand.count;
                     }
                     string damageInfo = "";
@@ -182,7 +316,7 @@ public class BlackjackUIController : MonoBehaviour
                         unsafe
                         {
                             var loserHand = blackjackManager.PlayerHands[i];
-                            for (int c = 0; c < loserHand.count; c++) loserVal += GetCardValue(loserHand.cards[c]);
+                            for (int c = 0; c < loserHand.count; c++) loserVal += GetCardValue(loserHand.Get(c).value);
                         }
                         if (loserVal > 21) loserVal = 0;
                         if (hp <= 0) continue;
@@ -240,8 +374,8 @@ public class BlackjackUIController : MonoBehaviour
                 var hand = blackjackManager.PlayerHands[playerIdx];
                 for (int c = 0; c < hand.count; c++)
                 {
-                    int card = hand.cards[c];
-                    string spritePath = SpawnedCardHelper.CardIntToSpritePath(card);
+                    CardData card = hand.Get(c);
+                    string spritePath = SpawnedCardHelper.CardIntToSpritePath(card.value);
                     var sprite = Resources.Load<Sprite>(spritePath);
                     var img = new Image();
                     img.sprite = sprite;
@@ -267,8 +401,8 @@ public class BlackjackUIController : MonoBehaviour
                     row.AddToClassList("opponent-hand-row");
                     for (int c = 0; c < hand.count; c++)
                     {
-                        int card = hand.cards[c];
-                        string spritePath = SpawnedCardHelper.CardIntToSpritePath(card);
+                        CardData card = hand.Get(c);
+                        string spritePath = SpawnedCardHelper.CardIntToSpritePath(card.value);
                         var sprite = Resources.Load<Sprite>(spritePath);
                         var img = new Image();
                         img.sprite = sprite;
@@ -289,10 +423,12 @@ public class BlackjackUIController : MonoBehaviour
             {
                 var hand = blackjackManager.PlayerHands[playerIdx];
                 int handValue = 0;
+                string handStr = "";
                 for (int c = 0; c < hand.count; c++)
                 {
-                    int card = hand.cards[c];
-                    handValue += GetCardValue(card);
+                    CardData card = hand.Get(c);
+                    handStr += CardToString(card.value) + " ";
+                    handValue += GetCardValue(card.value);
                 }
                 int hp = (playerIdx < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[playerIdx] : 0;
                 playerLabel.text = $"Your Hand (Value: {handValue}) | HP: {hp}";
@@ -431,9 +567,9 @@ public class BlackjackUIController : MonoBehaviour
                     int handValue = 0;
                     for (int c = 0; c < hand.count; c++)
                     {
-                        int card = hand.cards[c];
-                        handStr += CardToString(card) + " ";
-                        handValue += GetCardValue(card);
+                        CardData card = hand.Get(c);
+                        handStr += CardToString(card.value) + " ";
+                        handValue += GetCardValue(card.value);
                     }
                     int hp = (i < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[i] : 0;
                     string winnerNote = (winnerIdx == i) ? " [WINNER]" : "";
@@ -457,7 +593,7 @@ public class BlackjackUIController : MonoBehaviour
                     unsafe
                     {
                         var winnerHand = blackjackManager.PlayerHands[winnerIdx];
-                        for (int c = 0; c < winnerHand.count; c++) winnerVal += GetCardValue(winnerHand.cards[c]);
+                        for (int c = 0; c < winnerHand.count; c++) winnerVal += GetCardValue(winnerHand.Get(c).value);
                         winnerCardCount = winnerHand.count;
                     }
                     string damageInfo = "";
@@ -469,7 +605,7 @@ public class BlackjackUIController : MonoBehaviour
                         unsafe
                         {
                             var loserHand = blackjackManager.PlayerHands[i];
-                            for (int c = 0; c < loserHand.count; c++) loserVal += GetCardValue(loserHand.cards[c]);
+                            for (int c = 0; c < loserHand.count; c++) loserVal += GetCardValue(loserHand.Get(c).value);
                         }
                         if (loserVal > 21 || hp <= 0) continue;
                         int dmg = winnerVal - loserVal;
