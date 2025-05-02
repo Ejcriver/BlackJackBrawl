@@ -58,6 +58,9 @@ public class BlackjackUIController : MonoBehaviour
                 standButton.clicked += OnStandClicked;
 
             // Add Show Deck button
+            // Always re-query and re-assign showDeckButton and event handler
+            if (showDeckButton != null)
+                showDeckButton.clicked -= OnShowDeckClicked;
             showDeckButton = root.Q<Button>("ShowDeckButton");
             if (showDeckButton == null)
             {
@@ -68,6 +71,12 @@ public class BlackjackUIController : MonoBehaviour
                 root.Add(showDeckButton);
             }
             showDeckButton.clicked += OnShowDeckClicked;
+
+            // Always reset deckPopup and deckListScroll on re-enter
+            deckPopup = root.Q<VisualElement>("DeckPopup");
+            deckListScroll = null;
+            if (deckPopup != null)
+                deckListScroll = deckPopup.Q<ScrollView>("DeckListScroll");
 
             // Subscribe to deck event for non-hosts
             NetworkBlackjackManager.OnDeckReceivedFromHost += OnDeckReceivedFromHost;

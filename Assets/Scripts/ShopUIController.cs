@@ -10,6 +10,7 @@ public class ShopUIController : MonoBehaviour
     private Button buyMaxHPButton;
     private Button buyDoubleDownButton;
     private Button buyStealButton; // For power cards
+    private Button showDeckButton; // New: Show Deck button
 
     private void Awake()
     {
@@ -25,7 +26,9 @@ public class ShopUIController : MonoBehaviour
             shopRoot = root.Q<VisualElement>("ShopRoot");
             shopChipsLabel = root.Q<Label>("ShopChipsLabel");
             closeShopButton = root.Q<Button>("CloseShopButton");
-            buyMaxHPButton = root.Q<Button>("BuyMaxHPButton");
+            showDeckButton = root.Q<Button>("ShowDeckButton");
+            if (showDeckButton != null)
+                showDeckButton.clicked += OnShowDeckClicked;
             if (closeShopButton != null)
                 closeShopButton.clicked += HideShop;
             if (buyMaxHPButton != null)
@@ -50,6 +53,8 @@ public class ShopUIController : MonoBehaviour
             buyDoubleDownButton.clicked -= OnBuyDoubleDown;
         if (buyStealButton != null)
             buyStealButton.clicked -= OnBuySteal;
+        if (showDeckButton != null)
+            showDeckButton.clicked -= OnShowDeckClicked;
     }
 
     public void ShowShop()
@@ -155,4 +160,23 @@ public class ShopUIController : MonoBehaviour
             }
         }
     }
+
+    // Show Deck button click handler for Shop UI
+    private void OnShowDeckClicked()
+    {
+        var blackjackUI = FindFirstObjectByType<BlackjackUIController>();
+        if (blackjackUI != null)
+        {
+            var method = typeof(BlackjackUIController).GetMethod("OnShowDeckClicked", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            if (method != null)
+                method.Invoke(blackjackUI, null);
+            else
+                Debug.LogWarning("[ShopUI] Could not find OnShowDeckClicked method in BlackjackUIController.");
+        }
+        else
+        {
+            Debug.LogWarning("[ShopUI] Could not find BlackjackUIController instance to show deck popup.");
+        }
+    }
 }
+

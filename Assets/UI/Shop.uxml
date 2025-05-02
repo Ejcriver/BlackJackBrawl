@@ -7,6 +7,7 @@
             <ui:Button name="BuyMaxHPButton" text="Buy +5 Max HP (10 Chips)" class="shop-item-button" />
             <ui:Button name="BuyDoubleDownButton" text="Buy Power: Double Down (15 Chips)" class="shop-item-button" />
             <ui:Button name="BuyStealButton" text="Buy Power: Steal (15 Chips)" class="shop-item-button" />
+        <ui:Button name="ShowDeckButton" text="Show Deck" class="shop-item-button" />
         </ui:VisualElement>
         <ui:Button name="CloseShopButton" text="Close" class="close-button" />
     </ui:VisualElement>

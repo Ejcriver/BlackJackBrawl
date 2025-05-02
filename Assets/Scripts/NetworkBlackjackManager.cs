@@ -109,9 +109,12 @@ public class NetworkBlackjackManager : NetworkBehaviour
         // Reset all player decks and hands
         for (int i = 0; i < playerDecks.Count; i++)
         {
+            // Preserve power cards, only reset standard cards
+            var powerCards = playerDecks[i].FindAll(card => card.cardType == CardType.Power);
             playerDecks[i].Clear();
             for (int value = 1; value <= 13; value++)
                 playerDecks[i].Add(new CardData { cardType = CardType.Standard, value = value, suit = 0, powerId = 0 });
+            playerDecks[i].AddRange(powerCards);
             Shuffle(playerDecks[i]);
         }
         for (int i = 0; i < playerHands.Count; i++)
