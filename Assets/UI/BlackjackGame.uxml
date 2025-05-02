@@ -1,9 +1,21 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns="UnityEngine.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/UI/BlackjackGame.uss?fileID=7433441132597879392&amp;guid=4913b52fdf1ecce44943f6f2f9a03f9e&amp;type=3#BlackjackGame" />
     <ui:VisualElement name="BlackjackRoot" class="blackjack-root">
-        <ui:VisualElement name="Background" class="background" />
+        <ui:VisualElement class="stats-bar">
+            <ui:VisualElement name="LocalStatsPanel" class="stats-panel left-stats-panel">
+                <ui:Label name="HandValueLabel" class="stat-label" text="Hand Value: 0" />
+                <ui:Label name="ChipsLabel" class="stat-label" text="Chips: 0" />
+                <ui:Label name="HPLabel" class="stat-label" text="HP: 0" />
+            </ui:VisualElement>
+            <ui:VisualElement name="OtherStatsPanel" class="stats-panel right-stats-panel">
+                <ui:Label name="OtherHandValueLabel" class="stat-label" text="Hand Value: 0" />
+                <ui:Label name="OtherChipsLabel" class="stat-label" text="Chips: 0" />
+                <ui:Label name="OtherHPLabel" class="stat-label" text="HP: 0" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        
         <ui:VisualElement name="LocalPlayerPanel" class="panel">
-            <ui:Label name="LocalPlayerLabel" class="section-label" />
+            <ui:Label name="LocalPlayerLabel" class="section-label" text="You" />
             <ui:VisualElement name="LocalPlayerHand" class="hand-panel" />
         </ui:VisualElement>
         <ui:VisualElement name="OtherPlayerPanel" class="panel">
@@ -15,8 +27,7 @@
             <ui:Button name="StandButton" text="Stand" class="action-button" />
         </ui:VisualElement>
         <ui:VisualElement name="InfoPanel" class="info-panel">
-            <ui:Label name="ChipsLabel" class="info-label" />
-            <ui:Label name="HPLabel" class="info-label" />
+
             <ui:Label name="RoundInfoLabel" class="info-label" />
         </ui:VisualElement>
         <ui:VisualElement name="PowerCardsPanel" class="powercards-panel">

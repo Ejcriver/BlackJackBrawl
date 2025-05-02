@@ -1,4 +1,50 @@
 /* Root styling */
+.stats-bar {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    margin-top: 12px;
+    margin-bottom: 18px;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+.left-stats-panel, .right-stats-panel {
+    pointer-events: auto;
+}
+.left-stats-panel {
+    align-items: flex-start;
+    margin-left: 24px;
+}
+.right-stats-panel {
+    align-items: flex-end;
+    margin-right: 24px;
+}
+
+.stats-panel {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(34, 49, 63, 0.98);
+    border-radius: 12px;
+    padding: 10px 32px;
+    margin-top: 12px;
+    margin-bottom: 18px;
+    min-width: 340px;
+    max-width: 480px;
+}
+.stat-label {
+    color: #fff;
+    font-size: 18px;
+    -unity-font-style: bold;
+    margin: 0 18px;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px #222;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background-color: rgba(52, 152, 219, 0.13);
+}
 .blackjack-root {
     flex-direction: column;
     align-items: center;

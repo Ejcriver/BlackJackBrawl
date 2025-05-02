@@ -15,7 +15,6 @@ public class BlackjackUIController : MonoBehaviour
     private VisualElement infoPanel;
     private Label messageLabel;
     private Label playerLabel; // Remove dealerLabel
-    private Label chipsLabel;
     private List<Label> playerInfoLabels = new List<Label>();
 
     // Deck UI
@@ -23,6 +22,16 @@ public class BlackjackUIController : MonoBehaviour
     private VisualElement deckPopup;
     private ScrollView deckListScroll;
     private Button closeDeckPopupButton;
+
+    // Stats panel fields
+    private VisualElement localStatsPanel;
+    private VisualElement otherStatsPanel;
+    private Label handValueLabel;
+    private Label hpLabel;
+    private Label chipsLabel;
+    private Label otherHandValueLabel;
+    private Label otherHPLabel;
+    private Label otherChipsLabel;
 
 
     void Awake()
@@ -48,6 +57,16 @@ public class BlackjackUIController : MonoBehaviour
             messageLabel = root.Q<Label>("MessageLabel");
             playerLabel = root.Q<Label>("PlayerLabel");
             chipsLabel = root.Q<Label>("ChipsLabel");
+
+            // Stats Panels
+            localStatsPanel = root.Q<VisualElement>("LocalStatsPanel");
+            otherStatsPanel = root.Q<VisualElement>("OtherStatsPanel");
+            handValueLabel = root.Q<Label>("HandValueLabel");
+            hpLabel = root.Q<Label>("HPLabel");
+            chipsLabel = root.Q<Label>("ChipsLabel");
+            otherHandValueLabel = root.Q<Label>("OtherHandValueLabel");
+            otherHPLabel = root.Q<Label>("OtherHPLabel");
+            otherChipsLabel = root.Q<Label>("OtherChipsLabel");
             startRoundButton = root.Q<Button>("StartRoundButton");
             if (startRoundButton != null)
                 startRoundButton.clicked += OnStartRoundClicked;
@@ -291,6 +310,42 @@ public class BlackjackUIController : MonoBehaviour
 
         // Multiplayer info
         string gameStateStr = blackjackManager != null ? blackjackManager.gameState.Value.ToString() : "";
+
+        // Update stats panels
+        if (blackjackManager != null && blackjackManager.PlayerIds.Count > 0)
+        {
+            ulong localClientId = Unity.Netcode.NetworkManager.Singleton.LocalClientId;
+            int localPlayerIdx = blackjackManager.PlayerIds.IndexOf(localClientId);
+            // Local player panel
+            if (localPlayerIdx >= 0 && localPlayerIdx < blackjackManager.PlayerHands.Count)
+            {
+                var hand = blackjackManager.PlayerHands[localPlayerIdx];
+                int handValue = 0;
+                unsafe { for (int c = 0; c < hand.count; c++) handValue += GetCardValue(hand.Get(c).value); }
+                int hp = (localPlayerIdx < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[localPlayerIdx] : 0;
+                int chips = (localPlayerIdx < blackjackManager.PlayerChips.Count) ? blackjackManager.PlayerChips[localPlayerIdx] : 0;
+                if (handValueLabel != null) handValueLabel.text = $"Hand Value: {handValue}";
+                if (hpLabel != null) hpLabel.text = $"HP: {hp}";
+                if (chipsLabel != null) chipsLabel.text = $"Chips: {chips}";
+            }
+            // Other player panel (first non-local player)
+            int otherIdx = -1;
+            for (int i = 0; i < blackjackManager.PlayerIds.Count; i++)
+            {
+                if (i != localPlayerIdx) { otherIdx = i; break; }
+            }
+            if (otherIdx >= 0 && otherIdx < blackjackManager.PlayerHands.Count)
+            {
+                var hand = blackjackManager.PlayerHands[otherIdx];
+                int handValue = 0;
+                unsafe { for (int c = 0; c < hand.count; c++) handValue += GetCardValue(hand.Get(c).value); }
+                int hp = (otherIdx < blackjackManager.PlayerHP.Count) ? blackjackManager.PlayerHP[otherIdx] : 0;
+                int chips = (otherIdx < blackjackManager.PlayerChips.Count) ? blackjackManager.PlayerChips[otherIdx] : 0;
+                if (otherHandValueLabel != null) otherHandValueLabel.text = $"Hand Value: {handValue}";
+                if (otherHPLabel != null) otherHPLabel.text = $"HP: {hp}";
+                if (otherChipsLabel != null) otherChipsLabel.text = $"Chips: {chips}";
+            }
+        }
         if (blackjackManager != null && infoPanel != null)
         {
             infoPanel.Clear();
