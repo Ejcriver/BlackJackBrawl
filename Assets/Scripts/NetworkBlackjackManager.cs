@@ -209,6 +209,27 @@ public class NetworkBlackjackManager : NetworkBehaviour
             }
         }
     }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void BuyPowerCardServerRpc(ulong clientId, int powerId)
+    {
+        int playerIndex = playerIds.IndexOf(clientId);
+        if (playerIndex >= 0 && playerIndex < playerChips.Count && playerIndex < playerDecks.Count)
+        {
+            if (playerChips[playerIndex] >= 15)
+            {
+                playerChips[playerIndex] -= 15;
+                // Add power card to deck
+                var card = new CardData { cardType = CardType.Power, value = 0, suit = 0, powerId = powerId };
+                playerDecks[playerIndex].Add(card);
+                Debug.Log($"[Shop] Player {clientId} bought Power Card (powerId={powerId}). Chips left: {playerChips[playerIndex]}");
+            }
+            else
+            {
+                Debug.Log($"[Shop] Player {clientId} tried to buy power card (powerId={powerId}) but didn't have enough chips.");
+            }
+        }
+    }
     // Player requests to hit
     [ServerRpc(RequireOwnership = false)]
     public void HitServerRpc(ServerRpcParams rpcParams = default)

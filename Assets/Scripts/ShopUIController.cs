@@ -8,6 +8,8 @@ public class ShopUIController : MonoBehaviour
     private VisualElement shopRoot;
     private Button closeShopButton;
     private Button buyMaxHPButton;
+    private Button buyDoubleDownButton;
+    private Button buyStealButton; // For power cards
 
     private void Awake()
     {
@@ -28,6 +30,12 @@ public class ShopUIController : MonoBehaviour
                 closeShopButton.clicked += HideShop;
             if (buyMaxHPButton != null)
                 buyMaxHPButton.clicked += OnBuyMaxHP;
+            buyDoubleDownButton = root.Q<Button>("BuyDoubleDownButton");
+            buyStealButton = root.Q<Button>("BuyStealButton");
+            if (buyDoubleDownButton != null)
+                buyDoubleDownButton.clicked += OnBuyDoubleDown;
+            if (buyStealButton != null)
+                buyStealButton.clicked += OnBuySteal;
             UpdateShopChips();
         }
     }
@@ -38,6 +46,10 @@ public class ShopUIController : MonoBehaviour
             closeShopButton.clicked -= HideShop;
         if (buyMaxHPButton != null)
             buyMaxHPButton.clicked -= OnBuyMaxHP;
+        if (buyDoubleDownButton != null)
+            buyDoubleDownButton.clicked -= OnBuyDoubleDown;
+        if (buyStealButton != null)
+            buyStealButton.clicked -= OnBuySteal;
     }
 
     public void ShowShop()
@@ -92,6 +104,53 @@ public class ShopUIController : MonoBehaviour
                     // Call ServerRpc to process purchase
                     blackjackManager.BuyMaxHPServerRpc(localClientId);
                     UpdateShopChips();
+                }
+            }
+        }
+    }
+
+    // Demo: Buy Double Down power card (powerId 1)
+    private void OnBuyDoubleDown()
+    {
+        var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (blackjackManager != null)
+        {
+            ulong localClientId = Unity.Netcode.NetworkManager.Singleton.LocalClientId;
+            int localPlayerIdx = blackjackManager.PlayerIds.IndexOf(localClientId);
+            if (localPlayerIdx >= 0 && localPlayerIdx < blackjackManager.PlayerChips.Count)
+            {
+                int chips = blackjackManager.PlayerChips[localPlayerIdx];
+                if (chips >= 15)
+                {
+                    blackjackManager.BuyPowerCardServerRpc(localClientId, 1); // 1 = Double Down
+                    UpdateShopChips();
+                }
+                else
+                {
+                    Debug.Log("[ShopUI] Not enough chips to buy Double Down.");
+                }
+            }
+        }
+    }
+
+    private void OnBuySteal()
+    {
+        var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (blackjackManager != null)
+        {
+            ulong localClientId = Unity.Netcode.NetworkManager.Singleton.LocalClientId;
+            int localPlayerIdx = blackjackManager.PlayerIds.IndexOf(localClientId);
+            if (localPlayerIdx >= 0 && localPlayerIdx < blackjackManager.PlayerChips.Count)
+            {
+                int chips = blackjackManager.PlayerChips[localPlayerIdx];
+                if (chips >= 15)
+                {
+                    blackjackManager.BuyPowerCardServerRpc(localClientId, 2); // 2 = Steal
+                    UpdateShopChips();
+                }
+                else
+                {
+                    Debug.Log("[ShopUI] Not enough chips to buy Steal.");
                 }
             }
         }
