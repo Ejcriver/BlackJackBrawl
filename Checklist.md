@@ -2,18 +2,21 @@
 
 ## ✅ Core Project Requirements (Multiplayer Features)
 
+- [x] Fix issue with ACES
+
+
 - [x] Connect two instances of the game using **Unity Multiplayer Center**.
 - [x] Load a scene via the network (host-client setup).
 - [x] Spawn and control a **player prefab** when the scene loads.
 - [x] Create **multiple random spawn locations** for players.
 - [x] Move the **local player** independently (no interference with others).
 - [x] Sync a **camera** to follow the local player.
-- [ ] Implement a "shooting" or **spawning behavior** (e.g., spawning cards or chips on action).
-    - [ ] Design the object to be spawned (card/chip prefab)
-    - [ ] Implement local spawn logic on player action (e.g., button press)
-    - [ ] Network the spawn event so all players see the object
-    - [ ] Add visual and audio feedback for spawning
-    - [ ] Despawn or clean up objects as needed
+- [x] Implement a "shooting" or **spawning behavior** (e.g., spawning cards or chips on action).
+    - [x] Design the object to be spawned (card/chip prefab)
+    - [x] Implement local spawn logic on player action (e.g., button press)
+    - [x] Network the spawn event so all players see the object
+    - [x] Add visual and audio feedback for spawning
+    - [x] Despawn or clean up objects as needed
 - [ ] Objects that **perform actions** based on **networked variables** (e.g., chip count, hand value, etc.).
     - [ ] Identify which variables should drive object behavior
     - [ ] Implement logic for objects to react to variable changes (e.g., chips update when hand value changes)
@@ -29,11 +32,11 @@
     - [ ] Implement variable change logic in collision/event handler
     - [ ] Ensure variable changes are networked
     - [ ] Add UI feedback for variable changes
-- [ ] Create a **UI component** that tracks game events (e.g., wins/losses, chip count, power card use).
-    - [ ] Design layout for event tracker UI
-    - [ ] Implement event logging (e.g., win/loss, chip gain/loss, power card used)
-    - [ ] Display event log in UI
-    - [ ] Sync event tracker UI across network
+- [x] Create a **UI component** that tracks game events (e.g., wins/losses, chip count, power card use).
+    - [x] Design layout for event tracker UI
+    - [x] Implement event logging (e.g., win/loss, chip gain/loss, power card used)
+    - [x] Display event log in UI
+    - [x] Sync event tracker UI across network
 - [x] Demonstrate **Unity Cloud** interaction (Relay, Lobby, or Authentication).
 - [x] Implement a **Chat System**.
 - [x] Implement a **Player List** system (show connected players).
@@ -52,11 +55,11 @@
     - [x] Add chip earning/spending logic
     - [ ] Integrate advanced rules (e.g., special win conditions)
     - [ ] Update UI to support new features
-- [ ] Players draw from a **13-card deck** (standard cards + power cards).
-    - [ ] Define deck structure (standard + power cards)
-    - [ ] Implement deck initialization and shuffling
-    - [ ] Ensure deck syncs correctly in multiplayer
-    - [ ] Add UI to show remaining cards/deck composition
+- [x] Players draw from a **13-card deck** (standard cards + power cards).
+    - [x] Define deck structure (standard + power cards)
+    - [x] Implement deck initialization and shuffling
+    - [x] Ensure deck syncs correctly in multiplayer
+    - [x]  Add UI to show remaining cards/deck composition
 - [x] Players earn **Chips** by winning rounds or bonus plays.
     - [x] Define chip reward logic for wins/bonuses
     - [x] Implement chip tracking per player
@@ -78,11 +81,6 @@
     - [ ] Bind HP bar to networked player HP variable
     - [ ] Update HP bar in real-time
     - [ ] Test HP bar with multiple players
-- [ ] Add **damage pop-ups** for visual feedback.
-    - [ ] Design pop-up visual (animation/text)
-    - [ ] Trigger pop-up on damage event
-    - [ ] Network pop-up so all players see it
-    - [ ] Integrate with HP/damage system
 - [x] Eliminate players who reach **0 HP**.
 - [x] Declare **last player standing** as winner (auto rounds until only one remains).
 - [ ] Integrate HP-related **Power Cards**:
@@ -101,10 +99,6 @@
     - [ ] Allow player to select a card to shift
     - [ ] Apply shift and network the change
     - [ ] Update UI to show new value
-- [ ] Implement **Wildcard** – select 1 or 11 for a card.
-    - [ ] Allow player to choose value when playing Wildcard
-    - [ ] Apply value and network the choice
-    - [ ] Update UI to reflect Wildcard
 - [ ] Implement at least **5 more unique power cards**:
     - [ ] Define each power card's effect and rules
     - [ ] Implement logic for each card
@@ -133,10 +127,10 @@
     - [x] Update UI for transactions
   
 ### Deck System:
-- [ ] Players start with a **13-card deck**.
-    - [ ] Initialize deck at game start
-    - [ ] Ensure deck syncs for all players
-    - [ ] Show deck contents in UI
+- [x] Players start with a **13-card deck**.
+    - [x] Initialize deck at game start
+    - [x] Ensure deck syncs for all players
+    - [x] Show deck contents in UI
 - [ ] Deck updates **between rounds** via simple **shop**:
     - [ ] Implement shop logic for deck updates
     - [ ] Add/remove cards as needed
@@ -147,11 +141,11 @@
 
 ## 🧩 UI Elements:
 - [x] Debug multiplayer UI with turn-based controls and state display (for development)
-- [ ] Blackjack Table UI (player hand, deck, chips, power card buttons).
-    - [ ] Design and layout table UI
-    - [ ] Bind UI to networked variables
-    - [ ] Add interactivity for card and chip actions
-    - [ ] Test UI with multiple players
+- [x] Blackjack Table UI (player hand, deck, chips, power card buttons).
+    - [x] Design and layout table UI
+    - [x] Bind UI to networked variables
+    - [x] Add interactivity for card and chip actions
+    - [x] Test UI with multiple players
 - [x] **Chip Counter** (networked variable display).
     - [x] Add chip counter to UI
     - [x] Bind to networked chip variable
@@ -160,19 +154,10 @@
     - [ ] Design button bar UI
     - [ ] Connect buttons to power card logic
     - [ ] Update UI when cards are used
-- [ ] **Event Tracker UI** (track wins, chips, power cards used).
-    - [ ] Log events in code
-    - [ ] Display events in UI
-    - [ ] Sync event log across network
-- [ ] Chat UI and Player List UI.
-    - [ ] Refine chat UI layout and features
-    - [ ] Improve player list display
-    - [ ] Ensure both update in real-time
+- [x] **Event Tracker UI** (track wins, chips, power cards used).
+    - [x] Log events in code
+    - [x] Display events in UI
+    - [x] Sync event log across network
+
 
 ---
-
-## ⚙️ Stretch Goals (Optional but Cool):
-- [ ] Add more **Power Cards** for variety.
-- [ ] Add basic **Deck Theme bonuses** (Lean Deck, Power Deck etc.).
-- [ ] Implement **bonus conditions** (Five Card Charlie, Suited Win, etc.).
-- [ ] Add sound effects or animations for card play and round wins.
