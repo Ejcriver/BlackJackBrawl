@@ -11,6 +11,8 @@ public class BlackjackUIController : MonoBehaviour
     private Button hitButton;
     private Button standButton;
     private Button startRoundButton;
+    private Button joinTableButton;
+    private Button startSessionButton;
     private VisualElement playerHandPanel;
     private VisualElement infoPanel;
     private Label messageLabel;
@@ -70,6 +72,13 @@ public class BlackjackUIController : MonoBehaviour
             startRoundButton = root.Q<Button>("StartRoundButton");
             if (startRoundButton != null)
                 startRoundButton.clicked += OnStartRoundClicked;
+
+            joinTableButton = root.Q<Button>("JoinTableButton");
+            if (joinTableButton != null)
+                joinTableButton.clicked += OnJoinTableClicked;
+            startSessionButton = root.Q<Button>("StartSessionButton");
+            if (startSessionButton != null)
+                startSessionButton.clicked += OnStartSessionClicked;
 
             if (hitButton != null)
                 hitButton.clicked += OnHitClicked;
@@ -156,6 +165,10 @@ public class BlackjackUIController : MonoBehaviour
             standButton.clicked -= OnStandClicked;
         if (startRoundButton != null)
             startRoundButton.clicked -= OnStartRoundClicked;
+        if (joinTableButton != null)
+            joinTableButton.clicked -= OnJoinTableClicked;
+        if (startSessionButton != null)
+            startSessionButton.clicked -= OnStartSessionClicked;
         if (showDeckButton != null)
             showDeckButton.clicked -= OnShowDeckClicked;
         NetworkBlackjackManager.OnDeckReceivedFromHost -= OnDeckReceivedFromHost;
@@ -601,12 +614,33 @@ public class BlackjackUIController : MonoBehaviour
         return value;
     }
 
+    // Handler for Join Table button
+    private void OnJoinTableClicked()
+    {
+        var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (blackjackManager != null)
+        {
+            blackjackManager.JoinTableServerRpc();
+        }
+    }
+
+    // Handler for Start Session button
+    private void OnStartSessionClicked()
+    {
+        var blackjackManager = FindFirstObjectByType<NetworkBlackjackManager>();
+        if (blackjackManager != null)
+        {
+            blackjackManager.StartRoundServerRpc();
+        }
+    }
+
     // Multiplayer debug UI for development
     void OnGUI()
     {
         GUILayout.BeginArea(new Rect(10, 10, 320, 400), GUI.skin.box);
         GUILayout.Label("Multiplayer Blackjack Controls");
 
+        // (Debug UI for host/client is still here, but now also accessible from main UI)
         if (Unity.Netcode.NetworkManager.Singleton != null && !Unity.Netcode.NetworkManager.Singleton.IsClient && !Unity.Netcode.NetworkManager.Singleton.IsServer)
         {
             if (GUILayout.Button("Start Host"))

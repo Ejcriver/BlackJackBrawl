@@ -37,6 +37,8 @@
             <ui:Label name="MessageLabel" class="message-label" />
         </ui:VisualElement>
         <ui:Button name="StartRoundButton" text="Start New Round" class="action-button" />
+        <ui:Button name="JoinTableButton" text="Join Table" class="action-button" />
+        <ui:Button name="StartSessionButton" text="Start Session" class="action-button" />
         <ui:Button name="CloseButton" class="close-button" />
     </ui:VisualElement>
 </ui:UXML>
