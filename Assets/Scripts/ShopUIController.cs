@@ -31,6 +31,7 @@ public class ShopUIController : MonoBehaviour
                 showDeckButton.clicked += OnShowDeckClicked;
             if (closeShopButton != null)
                 closeShopButton.clicked += HideShop;
+            buyMaxHPButton = root.Q<Button>("BuyMaxHPButton");
             if (buyMaxHPButton != null)
                 buyMaxHPButton.clicked += OnBuyMaxHP;
             buyDoubleDownButton = root.Q<Button>("BuyDoubleDownButton");
